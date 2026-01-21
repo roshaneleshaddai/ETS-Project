@@ -23,47 +23,53 @@ export class UserService {
     }
   }
 
-  async findOne(id:string): Promise<User>{
-    try{
-        const res = await this.userModel.findById(id);
-        console.log('id', id)
-        if(!res){
-            throw new Error('User not found');
-        }
-        return res;
-    }
-    catch(error){
-        console.error('Error in findOne:', error);
-        throw error;
-    }
-
-  }
-
-  async create(user :User) :Promise <User>{
-    try{
-      const res = await this.userModel.create(user);
-      if(!res){
-        throw new Error("user not created")
+  async findOne(id: string): Promise<User> {
+    try {
+      const res = await this.userModel.findById(id);
+      console.log('id', id);
+      if (!res) {
+        throw new Error('User not found');
       }
       return res;
+    } catch (error) {
+      console.error('Error in findOne:', error);
+      throw error;
     }
-    catch(error){
+  }
+
+  async create(user: User): Promise<User> {
+    try {
+      const res = await this.userModel.create(user);
+      if (!res) {
+        throw new Error('user not created');
+      }
+      return res;
+    } catch (error) {
       console.error('Error in create:', error);
       throw error;
     }
   }
 
-  async update(id:string, user:User): Promise<User>{
-    try{
-      const res = await this.userModel.findByIdAndUpdate(id, user)
-      if(!res){
-        throw new Error("User not found")
+  async update(id: string, user: User): Promise<User> {
+    try {
+      const res = await this.userModel.findByIdAndUpdate(id, user);
+      if (!res) {
+        throw new Error('User not found');
       }
       return res;
-    }
-    catch(Error){
+    } catch (Error) {
       console.error('Error in update:', Error);
       throw Error;
+    }
+  }
+
+  async findByEmail(email: string): Promise<UserDocument | null> {
+    try {
+      const res = await this.userModel.findOne({ email });
+      return res;
+    } catch (error) {
+      console.error('Error in findByEmail:', error);
+      throw error;
     }
   }
 }
