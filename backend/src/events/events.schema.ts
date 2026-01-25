@@ -15,6 +15,15 @@ export class Event {
   @Prop()
   description: string;
 
+  @Prop()
+  likes: number;
+
+  @Prop()
+  image : Blob;
+
+  @Prop()
+  dislikes: number;
+
   @Prop({ index: true })
   startDateTime: Date;
 

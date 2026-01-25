@@ -41,4 +41,27 @@ export class EventsService {
     }
     return deletedEvent;
   }
+  async incrementLike(eventId: string): Promise<Event> {
+      const event = await this.eventModel
+        .findByIdAndUpdate(eventId, { $inc: { likes: 1 } }, { new: true })
+        .exec();
+  
+      if (!event) {
+        throw new NotFoundException(`Event with ID ${eventId} not found`);
+      }
+  
+      return event;
+    }
+  
+    async decrementLike(eventId: string): Promise<Event> {
+      const event = await this.eventModel
+        .findByIdAndUpdate(eventId, { $inc: { likes: -1 } }, { new: true })
+        .exec();
+  
+      if (!event) {
+        throw new NotFoundException(`Event with ID ${eventId} not found`);
+      }
+  
+      return event;
+    }
 }

@@ -30,7 +30,7 @@ import { ZonesModule } from './zones/zones.module';
         if (!uri) {
           throw new Error('DB_URI is not defined');
         }
-        console.log("Db fetched")
+        console.log('Db fetched');
         return { uri };
       },
       inject: [ConfigService],
@@ -52,5 +52,6 @@ import { ZonesModule } from './zones/zones.module';
     WalletsModule,
     ZonesModule,
   ],
+  providers: [],
 })
 export class AppModule {}

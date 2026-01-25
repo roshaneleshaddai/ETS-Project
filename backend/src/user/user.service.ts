@@ -63,6 +63,19 @@ export class UserService {
     }
   }
 
+  async delete(id: string): Promise<User> {
+    try {
+      const res = await this.userModel.findByIdAndDelete(id);
+      if (!res) {
+        throw new Error('User not found');
+      }
+      return res;
+    } catch (error) {
+      console.error('Error in delete:', error);
+      throw error;
+    }
+  }
+
   async findByEmail(email: string): Promise<UserDocument | null> {
     try {
       const res = await this.userModel.findOne({ email });

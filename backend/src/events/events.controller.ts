@@ -38,4 +38,14 @@ export class EventsController {
   async delete(@Param('id') id: string): Promise<Event> {
     return this.eventsService.delete(id);
   }
+
+  @Post(':id/like')
+  async incrementLike(@Param('id') id: string): Promise<Event> {
+    return this.eventsService.incrementLike(id);
+  }
+
+  @Delete(':id/like')
+  async decrementLike(@Param('id') id: string): Promise<Event> {
+    return this.eventsService.decrementLike(id);
+  }
 }
