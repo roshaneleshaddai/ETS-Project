@@ -12,7 +12,7 @@ export default function Home() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "TICKETING",
+    role: "CUSTOMER",
   });
   const [error, setError] = useState("");
 
@@ -141,6 +141,7 @@ export default function Home() {
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                 >
                   <option value="GATE">Gate Staff</option>
+                  <option value="CUSTOMER">Customer</option>
                   <option value="TICKETING">Ticketing Agent</option>
                   <option value="MANAGEMENT">Management</option>
                   <option value="ADMIN">Administrator</option>
