@@ -85,6 +85,15 @@ export default function UserManagementPage() {
 
   const handleRoleUpdate = async (userId, newRole) => {
     try {
+      // First, fetch the current user to get their existing role
+      const userResponse = await fetch(`http://localhost:5000/user/${userId}`);
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user');
+      }
+      const currentUser = await userResponse.json();
+      const oldRole = currentUser.role;
+
+      // Update the user role
       const response = await fetch(`http://localhost:5000/user/${userId}`, {
         method: 'PUT',
         headers: {
@@ -95,6 +104,57 @@ export default function UserManagementPage() {
 
       if (!response.ok) {
         throw new Error('Failed to update role');
+      }
+
+      // Handle customer record creation/deletion based on role change
+      const isChangingToCustomer = oldRole !== 'CUSTOMER' && newRole === 'CUSTOMER';
+      const isChangingFromCustomer = oldRole === 'CUSTOMER' && newRole !== 'CUSTOMER';
+
+      if (isChangingToCustomer) {
+        // Create customer record
+        const customerData = {
+          encryptedPII: {
+            name: currentUser.name,
+            email: currentUser.email,
+            phone: '', // You may need to add phone to User schema or leave empty
+          },
+          loyalty: {
+            verified: false,
+          },
+        };
+
+        const customerResponse = await fetch('http://localhost:5000/customers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(customerData),
+        });
+
+        if (!customerResponse.ok) {
+          console.error('Failed to create customer record');
+        }
+      } else if (isChangingFromCustomer) {
+        // Find and delete customer record by email
+        const customerResponse = await fetch(
+          `http://localhost:5000/customers/email/${currentUser.email}`
+        );
+
+        if (customerResponse.ok) {
+          const customer = await customerResponse.json();
+          if (customer && customer._id) {
+            const deleteResponse = await fetch(
+              `http://localhost:5000/customers/${customer._id}`,
+              {
+                method: 'DELETE',
+              }
+            );
+
+            if (!deleteResponse.ok) {
+              console.error('Failed to delete customer record');
+            }
+          }
+        }
       }
 
       // Refresh users list

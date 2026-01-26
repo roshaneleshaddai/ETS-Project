@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { UserService } from '../user/user.service';
+import { CustomersService } from '../customers/customers.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -11,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 export class AuthService {
   constructor(
     private userService: UserService, // Injecting UserService
+    private customersService: CustomersService,
     private jwtService: JwtService,
   ) {}
 
@@ -33,7 +35,29 @@ export class AuthService {
       },
     });
 
-    // 4. Return token (optional) or just success message
+    // 4. If role is CUSTOMER, create customer record
+    if (userData.role === 'CUSTOMER') {
+      try {
+        const customerData = {
+          encryptedPII: {
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone || '',
+          },
+          loyalty: {
+            verified: false,
+          },
+        };
+        await this.customersService.create(customerData);
+      } catch (error) {
+        console.error('Failed to create customer record:', error);
+        // Optional: You might want to delete the user if customer creation fails
+        // await this.userService.delete(newUser._id);
+        // throw error;
+      }
+    }
+
+    // 5. Return token
     return this.generateToken(newUser);
   }
 
