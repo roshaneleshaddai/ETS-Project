@@ -69,8 +69,8 @@ export default function RoleChangeDialog({ user, onClose, onConfirm }) {
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                <Shield className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mr-3">
+                <Shield className="w-5 h-5 text-slate-800" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900" id="modal-title">
@@ -120,7 +120,7 @@ export default function RoleChangeDialog({ user, onClose, onConfirm }) {
                   key={role}
                   className={`flex items-start p-3 border-2 rounded-lg cursor-pointer transition-all ${
                     selectedRole === role
-                      ? 'border-purple-500 bg-purple-50'
+                      ? 'border-slate-800 bg-slate-50'
                       : 'border-gray-200 hover:border-gray-300'
                   } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -131,7 +131,7 @@ export default function RoleChangeDialog({ user, onClose, onConfirm }) {
                     checked={selectedRole === role}
                     onChange={(e) => setSelectedRole(e.target.value)}
                     disabled={loading}
-                    className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                    className="mt-1 h-4 w-4 text-slate-800 focus:ring-slate-800 border-gray-300"
                   />
                   <div className="ml-3 flex-1">
                     <div className="flex items-center justify-between">
@@ -174,7 +174,7 @@ export default function RoleChangeDialog({ user, onClose, onConfirm }) {
               type="button"
               onClick={handleConfirm}
               disabled={loading || selectedRole === user.role}
-              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="px-4 py-2 text-sm font-medium text-white bg-slate-800 rounded-lg hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {loading ? (
                 <>

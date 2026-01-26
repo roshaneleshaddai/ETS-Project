@@ -20,7 +20,7 @@ export default function UserTable({ users, onRoleUpdate, onPermissionsUpdate, on
 
   const getRoleBadgeColor = (role) => {
     const colors = {
-      ADMIN: 'bg-purple-100 text-purple-800',
+      ADMIN: 'bg-slate-100 text-slate-800',
       CUSTOMER: 'bg-blue-100 text-blue-800',
       TICKETING: 'bg-green-100 text-green-800',
       GATE: 'bg-yellow-100 text-yellow-800',
@@ -171,7 +171,7 @@ export default function UserTable({ users, onRoleUpdate, onPermissionsUpdate, on
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleRoleClick(user)}
-                      className="text-indigo-600 hover:text-indigo-900 flex items-center"
+                      className="text-red-600 hover:text-red-700 flex items-center"
                     >
                       <Edit2 className="w-4 h-4 mr-1" />
                       Edit

@@ -1,18 +1,20 @@
 "use client";
-import { useState } from "react";
+import Navbar from "../components/Navbar";
+import RoleGuard from "../components/RoleGuard";
 
 export default function TicketingHomePage({ user, logout }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <h1 className="text-2xl font-bold text-center mt-20">
-        Ticketing Dashboard – Coming Soon!
-      </h1>
-      <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Logout
-              </button>
-    </div>
+    <RoleGuard allowedRoles={["TICKETING"]}>
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] pb-20 md:pb-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Ticketing Dashboard – Coming Soon!
+            </h1>
+          </div>
+        </div>
+      </div>
+    </RoleGuard>
   );
 }

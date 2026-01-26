@@ -46,7 +46,7 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-slate-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function Home() {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-800 focus:ring-slate-800 sm:text-sm p-2 border"
               />
             </div>
           )}
@@ -125,12 +125,12 @@ export default function Home() {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-800 focus:ring-slate-800 sm:text-sm p-2 border"
                   placeholder="••••••••"
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Role
                 </label>
@@ -138,7 +138,7 @@ export default function Home() {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-800 focus:ring-slate-800 sm:text-sm p-2 border"
                 >
                   <option value="GATE">Gate Staff</option>
                   <option value="CUSTOMER">Customer</option>
@@ -149,13 +149,13 @@ export default function Home() {
                 <p className="mt-1 text-xs text-gray-500">
                   Select your primary role in the system.
                 </p>
-              </div>
+              </div> */}
             </>
           )}
 
           <button
             onClick={handleSubmit}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800"
           >
             {isLogin ? "Sign In" : "Sign Up"}
           </button>
@@ -167,7 +167,7 @@ export default function Home() {
               setIsLogin(!isLogin);
               setError("");
             }}
-            className="text-sm text-indigo-600 hover:text-indigo-500"
+            className="text-sm text-red-600 hover:text-red-700"
           >
             {isLogin
               ? "Don't have an account? Sign up"

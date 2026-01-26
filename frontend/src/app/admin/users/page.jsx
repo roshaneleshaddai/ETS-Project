@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, Filter, Users as UsersIcon, Shield } from "lucide-react";
 import UserTable from "../../components/UserTable";
+import RoleGuard from "../../components/RoleGuard";
+import Navbar from "../../components/Navbar";
 
 export default function UserManagementPage() {
   const router = useRouter();
@@ -35,7 +37,7 @@ export default function UserManagementPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('http://localhost:5000/user');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/user`);
       console.log('Fetch users response:', response);
       
       if (!response.ok) {
@@ -86,7 +88,7 @@ export default function UserManagementPage() {
   const handleRoleUpdate = async (userId, newRole) => {
     try {
       // First, fetch the current user to get their existing role
-      const userResponse = await fetch(`http://localhost:5000/user/${userId}`);
+      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/user/${userId}`);
       if (!userResponse.ok) {
         throw new Error('Failed to fetch user');
       }
@@ -94,7 +96,7 @@ export default function UserManagementPage() {
       const oldRole = currentUser.role;
 
       // Update the user role
-      const response = await fetch(`http://localhost:5000/user/${userId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/user/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +125,7 @@ export default function UserManagementPage() {
           },
         };
 
-        const customerResponse = await fetch('http://localhost:5000/customers', {
+        const customerResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/customers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -137,14 +139,14 @@ export default function UserManagementPage() {
       } else if (isChangingFromCustomer) {
         // Find and delete customer record by email
         const customerResponse = await fetch(
-          `http://localhost:5000/customers/email/${currentUser.email}`
+          `${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/email/${currentUser.email}`
         );
 
         if (customerResponse.ok) {
           const customer = await customerResponse.json();
           if (customer && customer._id) {
             const deleteResponse = await fetch(
-              `http://localhost:5000/customers/${customer._id}`,
+              `${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/${customer._id}`,
               {
                 method: 'DELETE',
               }
@@ -169,7 +171,7 @@ export default function UserManagementPage() {
 
   const handlePermissionsUpdate = async (userId, newPermissions) => {
     try {
-      const response = await fetch(`http://localhost:5000/users/${userId}/permissions`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/users/${userId}/permissions`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -195,7 +197,7 @@ export default function UserManagementPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-slate-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading users...</p>
         </div>
       </div>
@@ -203,38 +205,11 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.back()}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 bg-purple-600 rounded-lg flex items-center justify-center">
-                  <UsersIcon className="w-5 h-5 text-white" />
-                </div>
-                <h1 className="text-xl font-semibold text-gray-900">User Management</h1>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <span className="text-sm text-gray-600">{currentUser?.name || 'Admin'}</span>
-              <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
-                {currentUser?.role}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <RoleGuard allowedRoles={["ADMIN"]}>
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        {/* Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
         {/* Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
@@ -247,7 +222,7 @@ export default function UserManagementPage() {
               {users.filter(u => u.isActive).length}
             </p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-purple-500">
+          <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-slate-800">
             <p className="text-sm text-gray-600">Admins</p>
             <p className="text-2xl font-bold text-gray-900">
               {users.filter(u => u.role === 'ADMIN').length}
@@ -257,6 +232,24 @@ export default function UserManagementPage() {
             <p className="text-sm text-gray-600">Customers</p>
             <p className="text-2xl font-bold text-gray-900">
               {users.filter(u => u.role === 'CUSTOMER').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-purple-500">
+            <p className="text-sm text-gray-600">Ticketing Agents</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {users.filter(u => u.role === 'TICKETING').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-orange-500">
+            <p className="text-sm text-gray-600">Gate Staff</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {users.filter(u => u.role === 'GATE').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-gray-500">
+            <p className="text-sm text-gray-600">Management</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {users.filter(u => u.role === 'MANAGEMENT').length}
             </p>
           </div>
         </div>
@@ -273,7 +266,7 @@ export default function UserManagementPage() {
                   placeholder="Search by name, email, or ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-transparent"
                 />
               </div>
             </div>
@@ -285,7 +278,7 @@ export default function UserManagementPage() {
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-transparent appearance-none"
                 >
                   {roles.map(role => (
                     <option key={role} value={role}>
@@ -306,7 +299,7 @@ export default function UserManagementPage() {
                 setSearchQuery("");
                 setRoleFilter("ALL");
               }}
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+              className="text-sm text-red-600 hover:text-red-700 font-medium"
             >
               Clear Filters
             </button>
@@ -327,7 +320,8 @@ export default function UserManagementPage() {
           onPermissionsUpdate={handlePermissionsUpdate}
           onRefresh={fetchUsers}
         />
+        </div>
       </div>
-    </div>
+    </RoleGuard>
   );
 }
