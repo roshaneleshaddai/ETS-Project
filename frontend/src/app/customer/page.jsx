@@ -131,6 +131,15 @@ export default function CustomerHomePage({ user, logout }) {
     setCurrentSlide(index);
   };
 
+  const formatLikes = (likes) => {
+    if (likes >= 1000000) {
+      return (likes / 1000000).toFixed(1) + 'M' + '+';
+    }
+    else if (likes >= 1000) {
+      return (likes / 1000).toFixed(1) + 'K' + '+';
+    }
+    return likes.toString();
+  };
   const getEventImage = (event) => {
     if (event.image) {
       if (typeof event.image === 'string') {
@@ -402,6 +411,7 @@ export default function CustomerHomePage({ user, logout }) {
                       {event.name}
                     </h3>
                     <p className="text-xs text-gray-600">{event.type}</p>
+                    <p className="text-xs text-gray-600">{formatLikes(event.likes)}❤️</p>
                   </div>
                 </div>
               ))}
@@ -474,6 +484,7 @@ export default function CustomerHomePage({ user, logout }) {
                           {event.name}
                         </h3>
                         <p className="text-xs text-gray-600 mb-1">{event.venue?.name || 'Venue TBA'}</p>
+                        <p className="text-xs text-gray-600">{formatLikes(event.likes)}❤️</p>
                         <div className="flex items-center text-xs text-gray-500">
                           <Calendar className="w-3 h-3 mr-1" />
                           <span>{formatDate(event.startDateTime)}</span>

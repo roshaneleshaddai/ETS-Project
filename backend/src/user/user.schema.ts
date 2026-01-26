@@ -8,6 +8,7 @@ export enum UserRole {
   TICKETING = 'TICKETING',
   GATE = 'GATE',
   MANAGEMENT = 'MANAGEMENT',
+  CUSTOMER = 'CUSTOMER',
 }
 
 @Schema()
