@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
+import {formatLikes} from "../../utils/formatLikes";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -210,7 +211,7 @@ export default function EventDetailsPage() {
                   <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
                     {event.name}
                   </h1>
-                  <p className="text-gray-600">{event.description}</p>
+                  <p className="text-gray-600">{event.description} - {formatLikes(event.likes)}❤️</p>
                 </div>
 
                 {/* Event Details */}

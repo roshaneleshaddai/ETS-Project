@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, Calendar, MapPin, Heart, ChevronRight, ChevronLeft, Ticket, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Navbar from "../components/Navbar";
+import {formatLikes} from "../utils/formatLikes";
 
 export default function CustomerHomePage({ user, logout }) {
   const router = useRouter();
@@ -132,15 +133,6 @@ export default function CustomerHomePage({ user, logout }) {
     setCurrentSlide(index);
   };
 
-  const formatLikes = (likes) => {
-    if (likes >= 1000000) {
-      return (likes / 1000000).toFixed(1) + 'M' + '+';
-    }
-    else if (likes >= 1000) {
-      return (likes / 1000).toFixed(1) + 'K' + '+';
-    }
-    return likes.toString();
-  };
   const getEventImage = (event) => {
     if (event.image) {
       if (typeof event.image === 'string') {

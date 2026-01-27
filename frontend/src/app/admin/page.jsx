@@ -72,10 +72,10 @@ export default function AdminHomePage({ user, logout }) {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <ActionButton
-              title="Create Event"
-              description="Add a new event"
-              icon={Calendar}
-              onClick={() => router.push('/admin/events/create')}
+              title="Create User"
+              description="Add a new user"
+              icon={Users}
+              onClick={() => router.push('/admin/users/create')}
             />
             <ActionButton
               title="Manage Users"
@@ -84,7 +84,7 @@ export default function AdminHomePage({ user, logout }) {
               onClick={handleClickUserManagement}
             />
             <ActionButton
-              title="View Reports"
+              title="View Analytics"
               description="Access analytics"
               icon={BarChart3}
               onClick={() => router.push('/admin/reports')}
