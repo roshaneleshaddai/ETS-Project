@@ -4,6 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import AdminHomePage from "../admin/page";
 import CustomerHomePage from "../customer/page";
 import TicketingHomePage from "../ticketing/page";
+import GateHomePage from "../gate_staff/page";
+import ManagementHomePage from "../management/page";
 
 export default function HomePage() {
   const { user, loading, logout } = useAuth();
@@ -31,11 +33,7 @@ export default function HomePage() {
       return <AdminHomePage user={user} logout={logout} />;
 
     case "MANAGEMENT":
-      return (
-        <h1 className="text-2xl font-bold text-center mt-20">
-          Management Dashboard – Coming Soon!
-        </h1>
-      );
+      return <ManagementHomePage user={user} logout={logout} />;
 
     case "CUSTOMER":
       return <CustomerHomePage user={user} logout={logout} />;
@@ -44,11 +42,7 @@ export default function HomePage() {
       return <TicketingHomePage user={user} logout={logout} />;
 
     case "GATE":
-      return (
-        <h1 className="text-2xl font-bold text-center mt-20">
-          Gate Dashboard – Coming Soon!
-        </h1>
-      );
+      return <GateHomePage user={user} logout={logout} />;
 
     default:
       return null;
