@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Home, Search, Ticket, Heart, Settings, Users, LogOut } from "lucide-react";
+import Image from "next/image";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -82,10 +83,17 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 bg-slate-800 rounded-lg flex items-center justify-center">
-                <Ticket className="w-5 h-5 text-white" />
+              <div className="w-20 h-12 bg-slate-800 rounded-lg flex items-center justify-center">
+                <div className="relative w-20 h-12">
+                  <Image
+                    src="https://emperorspalace.com/wp-content/uploads/Emperors-Palace-Logo-Gold.svg"
+                    alt="Emperors Palace Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
+                </div>
               </div>
-              <h1 className="text-xl font-semibold text-gray-900">EventPass</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Emperors Palace</h1>
             </div>
             <nav className="hidden md:flex space-x-6">
               {navItems.map((item) => {
@@ -108,7 +116,8 @@ export default function Navbar() {
               })}
             </nav>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600 hidden sm:block">{user?.name || "User"}</span>
+              {/* <span className="text-sm text-gray-600 hidden sm:block">{user?.name || "User"}</span> */}
+              <button className="text-sm text-gray-600 hidden bg-gray-200 p-1 rounded-lg sm:block hover:cursor-pointer hover:bg-gray-300 hover:text-black" onClick={() => router.push('/profile')}>{user?.name || "User"}</button>
               {user?.role === "ADMIN" && <span className="px-2 py-1 bg-slate-100 text-slate-800 text-xs font-medium rounded">
                 {user?.role}
               </span>}
@@ -153,4 +162,3 @@ export default function Navbar() {
     </>
   );
 }
-
