@@ -5,28 +5,26 @@ import RoleGuard from "../components/RoleGuard";
 import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   console.log(user);
   
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [user, router]);
+
+  if (!user) return null;
 
   return (
     <RoleGuard allowedRoles={["ADMIN", "TICKETING", "GATE", "MANAGEMENT", "CUSTOMER"]}>
       <div className="min-h-screen">
         <Navbar />
-        <div className="flex items-center justify-between h-16">
+        {/* <div className="flex items-center justify-between h-6">
             <button
               onClick={() => router.back()}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
@@ -34,10 +32,10 @@ export default function ProfilePage() {
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium">Back</span>
             </button>
-          </div>
-        <div className="max-w-4xl mx-auto mt-10 px-4 pb-12">
+          </div> */}
+        <div className="max-w-4xl mx-auto mt-2 px-4 pb-12">
           {/* Header Card with Gradient */}
-          <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl shadow-xl p-8 mb-6 text-white">
+          <div className="bg-slate-800 rounded-2xl shadow-xl p-4 mb-6 text-white">
             <div className="flex items-center space-x-4">
               <div className="h-20 w-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl font-bold border-2 border-white/30">
                 {user.name?.charAt(0).toUpperCase()}
@@ -83,6 +81,15 @@ export default function ProfilePage() {
                     </svg>
                   }
                 />
+                <ProfileRow
+                  label="Phone Number"
+                  value={user.phone || "Not Provided"}
+                  icon={
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.213l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.213-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  }
+                />
                 <ProfileRow 
                   label="Role" 
                   value={user.role}
@@ -93,7 +100,7 @@ export default function ProfilePage() {
                     </svg>
                   }
                 />
-                <ProfileRow 
+                {/* <ProfileRow 
                   label="Account Status" 
                   value={user.isActive ? "Active" : "Inactive"}
                   statusBadge={user.isActive}
@@ -102,8 +109,8 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   }
-                />
-                <ProfileRow 
+                /> */}
+                {/* <ProfileRow 
                   label="Last Login" 
                   value={
                     user.lastLoginAt
@@ -118,7 +125,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   }
-                />
+                /> */}
               </div>
             </div>
 
@@ -126,7 +133,10 @@ export default function ProfilePage() {
             <div className="bg-gray-50 px-8 py-6 border-t border-gray-100">
               <div className="flex gap-3">
                 <button
-                  onClick={logout}
+                  onClick={() => {
+                    logout();
+                    router.push('/');
+                  }}
                   className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
