@@ -37,7 +37,7 @@ export class UserService {
     }
   }
 
-  async create(user: User): Promise<User> {
+  async create(user: User): Promise<UserDocument> {
     try {
       const res = await this.userModel.create(user);
       if (!res) {

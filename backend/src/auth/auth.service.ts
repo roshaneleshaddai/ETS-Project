@@ -44,11 +44,13 @@ export class AuthService {
             email: userData.email,
             phone: userData.phone || '',
           },
+          userId: newUser._id,
           loyalty: {
             verified: false,
           },
+          likedEvents: [],
         };
-        await this.customersService.create(customerData);
+        await this.customersService.create(customerData as any);
       } catch (error) {
         console.error('Failed to create customer record:', error);
         // Optional: You might want to delete the user if customer creation fails
