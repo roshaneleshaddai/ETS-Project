@@ -17,13 +17,19 @@ export default function CustomerHomePage({ user, logout }) {
   const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [likedEvents, setLikedEvents] = useState(new Set());
+  const [likingInProgress, setLikingInProgress] = useState(new Set());
+  const [customerId, setCustomerId] = useState(null);
 
   const categories = ['All', 'Music', 'Sports', 'Cinema', 'Comedy', 'Casino'];
   const autoRotateRef = useRef(null);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+    if (user) {
+      fetchCustomerData();
+    }
+  }, [user]);
 
   useEffect(() => {
     filterEvents();
@@ -66,6 +72,108 @@ export default function CustomerHomePage({ user, logout }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCustomerData = async () => {
+    try {
+      // Fetch customer data using user ID
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/user/${user._id}`);
+      if (!response.ok) {
+        console.error('Failed to fetch customer data');
+        return;
+      }
+      
+      const customerData = await response.json();
+      // console.log('Fetched customer data:', customerData);
+      
+      // Store the customer ID
+      setCustomerId(customerData._id);
+      
+      // Create a Set of liked event IDs for quick lookup
+      const likedEventIds = new Set(customerData.likedEvents?.map(id => id.toString()) || []);
+      setLikedEvents(likedEventIds);
+      
+    } catch (err) {
+      console.error('Error fetching customer data:', err);
+    }
+  };
+
+  const handleLikeToggle = async (eventId, e) => {
+    e.stopPropagation(); // Prevent event card click
+    
+    if (!user) {
+      alert('Please login to like events');
+      return;
+    }
+
+    if (!customerId) {
+      alert('Customer data not loaded. Please try again.');
+      return;
+    }
+
+    // Prevent multiple simultaneous requests for the same event
+    if (likingInProgress.has(eventId)) {
+      return;
+    }
+
+    try {
+      setLikingInProgress(prev => new Set([...prev, eventId]));
+      
+      const isLiked = likedEvents.has(eventId);
+      const endpoint = `${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/${customerId}/like-event`;
+      const method = isLiked ? 'DELETE' : 'POST';
+      
+      const response = await fetch(endpoint, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ eventId: eventId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update like status');
+      }
+
+      // Update local state optimistically
+      setLikedEvents(prev => {
+        const newSet = new Set(prev);
+        if (isLiked) {
+          newSet.delete(eventId);
+        } else {
+          newSet.add(eventId);
+        }
+        return newSet;
+      });
+
+      // Update the event's like count in the local state
+      setAllEvents(prevEvents => 
+        prevEvents.map(event => 
+          event._id === eventId 
+            ? { ...event, likes: (event.likes || 0) + (isLiked ? -1 : 1) }
+            : event
+        )
+      );
+
+      setFeaturedEvents(prevEvents =>
+        prevEvents.map(event =>
+          event._id === eventId
+            ? { ...event, likes: (event.likes || 0) + (isLiked ? -1 : 1) }
+            : event
+        )
+      );
+
+    } catch (err) {
+      console.error('Error toggling like:', err);
+      alert(err.message || 'Failed to update like status');
+    } finally {
+      setLikingInProgress(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(eventId);
+        return newSet;
+      });
     }
   };
 
@@ -245,7 +353,7 @@ export default function CustomerHomePage({ user, logout }) {
                             {event.type}
                           </span>
                           <h3 className="text-3xl font-bold mb-2">{event.name}</h3>
-                          <p className="text-sm opacity-90 max-w-2xl">{event.description || 'Experience the best entertainment'} - {formatLikes(event.likes)}❤️</p>
+                          <p className="text-sm opacity-90 max-w-2xl">{event.description || 'Experience the best entertainment'} - {formatLikes(event.likes || 0)}❤️</p>
                         </div>
                       </div>
                     </div>
@@ -353,8 +461,17 @@ export default function CustomerHomePage({ user, logout }) {
                       }}
                     />
                     <div className="absolute top-2 right-2">
-                      <button className="bg-white/90 hover:bg-white rounded-full p-2 shadow-md">
-                        <Heart className="w-4 h-4 text-gray-700" />
+                      <button 
+                        onClick={(e) => handleLikeToggle(event._id, e)}
+                        disabled={likingInProgress.has(event._id)}
+                        className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all ${
+                          likingInProgress.has(event._id) ? 'opacity-50 cursor-wait' : ''
+                        }`}
+                      >
+                        <Heart className={`w-4 h-4 ${
+                            likedEvents.has(event._id) ? 'fill-red-500 text-red-500' : 'text-gray-700'
+                          }`}
+                        />
                       </button>
                     </div>
                   </div>
@@ -363,7 +480,7 @@ export default function CustomerHomePage({ user, logout }) {
                       {event.name}
                     </h3>
                     <p className="text-xs text-gray-600">{event.type}</p>
-                    <p className="text-xs text-gray-600">{formatLikes(event.likes)}❤️</p>
+                    <p className="text-xs text-gray-600">{formatLikes(event.likes || 0)}❤️</p>
                   </div>
                 </div>
               ))}
@@ -416,13 +533,16 @@ export default function CustomerHomePage({ user, logout }) {
                         />
                         <div className="absolute top-2 right-2">
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Add to favorites logic
-                            }}
-                            className="bg-white/90 hover:bg-white rounded-full p-2 shadow-md"
+                            onClick={(e) => handleLikeToggle(event._id, e)}
+                            disabled={likingInProgress.has(event._id)}
+                            className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all ${
+                              likingInProgress.has(event._id) ? 'opacity-50 cursor-wait' : ''
+                            }`}
                           >
-                            <Heart className="w-4 h-4 text-gray-700" />
+                            <Heart className={`w-4 h-4 ${
+                                likedEvents.has(event._id) ? 'fill-red-500 text-red-500' : 'text-gray-700'
+                              }`}
+                            />
                           </button>
                         </div>
                         {event.status === 'ACTIVE' && (
@@ -436,7 +556,7 @@ export default function CustomerHomePage({ user, logout }) {
                           {event.name}
                         </h3>
                         <p className="text-xs text-gray-600 mb-1">{event.venue?.name || 'Venue TBA'}</p>
-                        <p className="text-xs text-gray-600">{formatLikes(event.likes)}❤️</p>
+                        <p className="text-xs text-gray-600">{formatLikes(event.likes || 0)}❤️</p>
                         <div className="flex items-center text-xs text-gray-500">
                           <Calendar className="w-3 h-3 mr-1" />
                           <span>{formatDate(event.startDateTime)}</span>

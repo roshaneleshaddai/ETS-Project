@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Search, Filter, Users as UsersIcon, Shield } from "lucide-react";
+import { ArrowLeft, Search, Filter, Users as UsersIcon, Shield, ChevronLeft, ChevronRight } from "lucide-react";
 import UserTable from "../../components/UserTable";
 import RoleGuard from "../../components/RoleGuard";
 import Navbar from "../../components/Navbar";
@@ -16,6 +16,10 @@ export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
   //key value pair role:label
   const roles = [
@@ -38,6 +42,7 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     filterUsers();
+    setCurrentPage(1); // Reset to first page when filters change
   }, [searchQuery, roleFilter, users]);
 
   const fetchUsers = async () => {
@@ -61,8 +66,14 @@ export default function UserManagementPage() {
       console.log('Current user ID:', currentUserId);
       
       const filteredData = data.filter(user => user._id !== currentUserId);
-      console.log('Filtered users data:', filteredData);
-      setUsers(filteredData);
+      
+      // Sort by creation date (newest first)
+      const sortedData = filteredData.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      
+      console.log('Filtered and sorted users data:', sortedData);
+      setUsers(sortedData);
       
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -126,8 +137,9 @@ export default function UserManagementPage() {
           encryptedPII: {
             name: currentUser.name,
             email: currentUser.email,
-            phone: '', // You may need to add phone to User schema or leave empty
+            phone: currentUser.phone || '', 
           },
+          userId: currentUser._id,
           loyalty: {
             verified: false,
           },
@@ -199,6 +211,69 @@ export default function UserManagementPage() {
       console.error('Error updating permissions:', error);
       return { success: false, error: error.message };
     }
+  };
+
+  // Pagination calculations
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    
+    if (totalPages <= maxPagesToShow) {
+      // Show all pages if total is less than max
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Show first page
+      pageNumbers.push(1);
+      
+      // Calculate range around current page
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Add ellipsis after first page if needed
+      if (startPage > 2) {
+        pageNumbers.push('...');
+      }
+      
+      // Add pages around current page
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+      
+      // Add ellipsis before last page if needed
+      if (endPage < totalPages - 1) {
+        pageNumbers.push('...');
+      }
+      
+      // Show last page
+      pageNumbers.push(totalPages);
+    }
+    
+    return pageNumbers;
   };
 
   if (loading) {
@@ -300,7 +375,7 @@ export default function UserManagementPage() {
 
           <div className="mt-3 flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Showing {filteredUsers.length} of {users.length} users
+              Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
             </p>
             <button
               onClick={() => {
@@ -323,11 +398,74 @@ export default function UserManagementPage() {
 
         {/* Users Table */}
         <UserTable
-          users={filteredUsers}
+          users={currentUsers}
           onRoleUpdate={handleRoleUpdate}
           onPermissionsUpdate={handlePermissionsUpdate}
           onRefresh={fetchUsers}
         />
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+
+              <div className="hidden sm:flex items-center gap-1">
+                {getPageNumbers().map((pageNum, index) => (
+                  pageNum === '...' ? (
+                    <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-400">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-slate-800 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                ))}
+              </div>
+
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mobile page indicator */}
+            <div className="sm:hidden text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </div>
+
+            {/* Desktop page indicator */}
+            <div className="hidden sm:block text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </div>
+          </div>
+        )}
         </div>
       </div>
     </RoleGuard>

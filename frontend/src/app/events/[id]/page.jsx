@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
 import {formatLikes} from "../../utils/formatLikes";
+import { useAuth } from "@/context/AuthContext";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -24,12 +25,32 @@ export default function EventDetailsPage() {
   const [error, setError] = useState(null);
   const [selectedZone, setSelectedZone] = useState(null);
   const [ticketQuantity, setTicketQuantity] = useState(1);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likingInProgress, setLikingInProgress] = useState(false);
+  const [customerId, setCustomerId] = useState(null);
+  const [user, setUser] = useState(null);
+  const {user: authUser} = useAuth();
+
+  useEffect(() => {
+    // Get user from localStorage or session
+    const storedUser = authUser;
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (params?.id) {
       fetchEventDetails(params.id);
+      if (user) {
+        fetchCustomerData(params.id);
+      }
     }
-  }, [params?.id]);
+  }, [params?.id, user]);
 
   const fetchEventDetails = async (eventId) => {
     try {
@@ -56,6 +77,87 @@ export default function EventDetailsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCustomerData = async (eventId) => {
+    try {
+      // Fetch customer data using user ID
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/user/${user._id}`);
+      
+      if (!response.ok) {
+        // If customer not found (404), that's okay - user might not have customer record yet
+        if (response.status === 404) {
+          console.log('No customer record found for this user');
+          return;
+        }
+        throw new Error('Failed to fetch customer data');
+      }
+      
+      const customerData = await response.json();
+      
+      // Store the customer ID
+      setCustomerId(customerData._id);
+      
+      // Check if the event is in the liked events array
+      const liked = customerData.likedEvents?.some(id => id.toString() === eventId);
+      setIsLiked(liked);
+      
+    } catch (err) {
+      console.error('Error fetching customer data:', err);
+      // Don't show error to user - just log it
+    }
+  };
+
+  const handleLikeToggle = async () => {
+    if (!user) {
+      alert('Please login to like events');
+      router.push('/auth/login');
+      return;
+    }
+
+    if (!customerId) {
+      alert('Unable to process like. Please refresh the page and try again.');
+      return;
+    }
+
+    if (likingInProgress) {
+      return;
+    }
+
+    try {
+      setLikingInProgress(true);
+      
+      const endpoint = `${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/${customerId}/like-event`;
+      const method = isLiked ? 'DELETE' : 'POST';
+      
+      const response = await fetch(endpoint, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ eventId: event._id })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to update like status' }));
+        throw new Error(errorData.message || 'Failed to update like status');
+      }
+
+      // Update local state optimistically
+      setIsLiked(!isLiked);
+      
+      // Update the event's like count in the local state
+      setEvent(prevEvent => ({
+        ...prevEvent,
+        likes: (prevEvent.likes || 0) + (isLiked ? -1 : 1)
+      }));
+
+    } catch (err) {
+      console.error('Error toggling like:', err);
+      alert(err.message || 'Failed to update like status');
+    } finally {
+      setLikingInProgress(false);
     }
   };
 
@@ -166,9 +268,20 @@ export default function EventDetailsPage() {
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <Share2 className="w-5 h-5 text-gray-700" />
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Heart className="w-5 h-5 text-gray-700" />
-              </button>
+              {user && customerId && (
+                <button 
+                  onClick={handleLikeToggle}
+                  disabled={likingInProgress}
+                  className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${
+                    likingInProgress ? 'opacity-50 cursor-wait' : ''
+                  }`}
+                >
+                  <Heart className={`w-5 h-5 ${
+                      isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700'
+                    }`}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -211,7 +324,7 @@ export default function EventDetailsPage() {
                   <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
                     {event.name}
                   </h1>
-                  <p className="text-gray-600">{event.description} - {formatLikes(event.likes)}❤️</p>
+                  <p className="text-gray-600">{event.description} - {formatLikes(event.likes || 0)}❤️</p>
                 </div>
 
                 {/* Event Details */}

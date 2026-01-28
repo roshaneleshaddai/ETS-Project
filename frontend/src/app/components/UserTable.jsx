@@ -101,12 +101,12 @@ export default function UserTable({ users, onRoleUpdate, onPermissionsUpdate, on
             <tbody className="bg-white divide-y divide-gray-200">
               {users.map((user) => (
                 <tr key={user._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-2 whitespace-nowrap">
                     <div className="text-sm font-mono text-gray-900">
                       {user._id.slice(-8)}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-2">
                     <div className="flex flex-col">
                       <div className="text-sm font-medium text-gray-900">
                         {user.name}
@@ -116,7 +116,7 @@ export default function UserTable({ users, onRoleUpdate, onPermissionsUpdate, on
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-2 whitespace-nowrap">
                     <button
                       onClick={() => handleRoleClick(user)}
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)} hover:opacity-80 transition-opacity cursor-pointer`}
@@ -125,7 +125,7 @@ export default function UserTable({ users, onRoleUpdate, onPermissionsUpdate, on
                       {user.role}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-2 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       user.isActive 
                         ? 'bg-green-100 text-green-800' 
@@ -144,13 +144,13 @@ export default function UserTable({ users, onRoleUpdate, onPermissionsUpdate, on
                       )}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-2 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-500">
                       <Calendar className="w-4 h-4 mr-1" />
                       {formatDate(user.createdAt)}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-2">
                     <div className="text-sm text-gray-900">
                       {user.permissions && user.permissions.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
@@ -168,7 +168,7 @@ export default function UserTable({ users, onRoleUpdate, onPermissionsUpdate, on
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleRoleClick(user)}
                       className="text-red-600 hover:text-red-700 flex items-center"
