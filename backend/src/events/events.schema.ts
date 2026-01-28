@@ -14,7 +14,7 @@ export class Event {
   likes: number;
 
   @Prop()
-  image : Blob;
+  image : string;
 
   @Prop()
   dislikes: number;
