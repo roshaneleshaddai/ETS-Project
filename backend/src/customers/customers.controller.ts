@@ -34,6 +34,13 @@ export class CustomersController {
     return this.customersService.findByEmail(email);
   }
 
+  @Get('user/:userId')
+  async findByUserId(
+    @Param('userId') userId: string,
+  ): Promise<Customer | null> {
+    return this.customersService.findByUserId(userId);
+  }
+
   @Get('loyalty/:loyaltyId')
   async findByLoyaltyId(
     @Param('loyaltyId') loyaltyId: string,

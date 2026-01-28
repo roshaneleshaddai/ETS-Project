@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Customer, CustomerDocument } from './customers.schema';
 import { EventsService } from '../events/events.service';
 
@@ -51,6 +51,15 @@ export class CustomersService {
         .exec();
     } catch (error) {
       console.error('Error in findByEmail:', error);
+      throw error;
+    }
+  }
+
+  async findByUserId(userId: string): Promise<Customer | null> {
+    try {
+      return await this.customerModel.findOne({ userId: userId as any }).exec();
+    } catch (error) {
+      console.error('Error in findByUserId:', error);
       throw error;
     }
   }
