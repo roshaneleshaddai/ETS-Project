@@ -24,6 +24,24 @@ export class EventsService {
     return event;
   }
 
+  async findByIds(ids: string[]): Promise<Event[]> {
+    try {
+      // Filter out invalid IDs and find all matching events
+      const events = await this.eventModel
+        .find({
+          _id: { $in: ids }
+        })
+        .exec();
+      
+      // Return found events (silently skip missing ones)
+      return events;
+    } catch (error) {
+      console.error('Error in findByIds:', error);
+      // Return empty array on error instead of throwing
+      return [];
+    }
+  }
+
   async update(id: string, event: Event): Promise<Event> {
     const updatedEvent = await this.eventModel
       .findByIdAndUpdate(id, event, { new: true })

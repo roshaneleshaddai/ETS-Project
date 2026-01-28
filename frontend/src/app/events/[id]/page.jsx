@@ -28,20 +28,7 @@ export default function EventDetailsPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [likingInProgress, setLikingInProgress] = useState(false);
   const [customerId, setCustomerId] = useState(null);
-  const [user, setUser] = useState(null);
-  const {user: authUser} = useAuth();
-
-  useEffect(() => {
-    // Get user from localStorage or session
-    const storedUser = authUser;
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error('Error parsing stored user:', err);
-      }
-    }
-  }, []);
+  const {user} = useAuth();
 
   useEffect(() => {
     if (params?.id) {

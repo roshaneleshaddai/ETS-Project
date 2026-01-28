@@ -37,8 +37,8 @@ export default function Navbar() {
   const customerNavItems = [
     { icon: Home, label: "Home", path: "/" },
     // { icon: Search, label: "Explore", path: "/explore" },
-    { icon: Ticket, label: "My Tickets", path: "/my-tickets" },
-    { icon: Heart, label: "Favorites", path: "/favorites" },
+    { icon: Ticket, label: "My Tickets", path: "/customer/my-tickets" },
+    { icon: Heart, label: "Favorites", path: "/customer/favorites" },
   ];
 
   // Ticketing navigation items

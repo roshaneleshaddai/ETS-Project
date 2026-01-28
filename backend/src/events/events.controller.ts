@@ -29,6 +29,11 @@ export class EventsController {
     return this.eventsService.findById(id);
   }
 
+  @Post('batch')
+  async findByIds(@Body('ids') ids: string[]): Promise<Event[]> {
+    return this.eventsService.findByIds(ids);
+  }
+
   @Put(':id')
   async update(@Param('id') id: string, @Body() event: Event): Promise<Event> {
     return this.eventsService.update(id, event);
