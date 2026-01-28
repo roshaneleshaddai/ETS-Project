@@ -24,5 +24,7 @@ export class Seat {
   status!: SeatStatus;
 
   @Prop() holdExpiresAt?: Date;
+
+  @Prop() heldBy?: string;
 }
 export const SeatSchema = SchemaFactory.createForClass(Seat);

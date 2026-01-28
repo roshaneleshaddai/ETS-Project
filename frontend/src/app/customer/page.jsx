@@ -418,13 +418,6 @@ export default function CustomerHomePage({ user, logout }) {
                 {category}
               </button>
             ))}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex-none px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center space-x-1"
-            >
-              <Filter className="w-4 h-4" />
-              <span>Filters</span>
-            </button>
           </div>
         </div>
       </section>

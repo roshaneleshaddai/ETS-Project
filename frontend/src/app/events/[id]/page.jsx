@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
-import {formatLikes} from "../../utils/formatLikes";
+import VenueMap from "@/app/components/VenueMap";
+import { formatLikes } from "../../utils/formatLikes";
 import { useAuth } from "@/context/AuthContext";
+import { io } from 'socket.io-client';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -14,21 +16,24 @@ import {
   Heart,
   Users,
   Info,
-  Ticket
+  Ticket,
+  ShoppingCart
 } from 'lucide-react';
 
 export default function EventDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const [event, setEvent] = useState(null);
+  const [venue, setVenue] = useState(null);
+  const [seats, setSeats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedZone, setSelectedZone] = useState(null);
-  const [ticketQuantity, setTicketQuantity] = useState(1);
+  const [selectedSeats, setSelectedSeats] = useState(new Set());
   const [isLiked, setIsLiked] = useState(false);
   const [likingInProgress, setLikingInProgress] = useState(false);
   const [customerId, setCustomerId] = useState(null);
-  const {user} = useAuth();
+  const [socket, setSocket] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (params?.id) {
@@ -36,6 +41,29 @@ export default function EventDetailsPage() {
       if (user) {
         fetchCustomerData(params.id);
       }
+      
+      // Setup WebSocket
+      const socketInstance = io(process.env.NEXT_PUBLIC_BACKEND_URI || 'http://localhost:4000');
+      setSocket(socketInstance);
+      
+      socketInstance.emit('join-event', params.id);
+      
+      socketInstance.on('seatStatusChanged', ({ seatId, status }) => {
+        setSeats(prevSeats => 
+          prevSeats.map(seat => 
+            seat._id === seatId ? { ...seat, status } : seat
+          )
+        );
+      });
+
+      socketInstance.on('joined-event', (data) => {
+        console.log('Joined event room:', data);
+      });
+
+      return () => {
+        socketInstance.emit('leave-event', params.id);
+        socketInstance.disconnect();
+      };
     }
   }, [params?.id, user]);
 
@@ -44,19 +72,24 @@ export default function EventDetailsPage() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/events/${eventId}`);
+      const eventRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/events/${eventId}`);
+      if (!eventRes.ok) throw new Error('Failed to fetch event details');
+      const eventData = await eventRes.json();
+      setEvent(eventData);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch event details');
+      if (eventData.venue?._id || eventData.venueId) {
+        const venueId = eventData.venue?._id || eventData.venueId;
+        const venueRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/venue/${venueId}`);
+        if (venueRes.ok) {
+          const venueData = await venueRes.json();
+          setVenue(venueData);
+        }
       }
       
-      const data = await response.json();
-      console.log('Event details:', data);
-      setEvent(data);
-      
-      // Set default zone if available
-      if (data.zones && data.zones.length > 0) {
-        setSelectedZone(data.zones[0]);
+      const seatsRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/event/${eventId}`);
+      if (seatsRes.ok) {
+        const seatsData = await seatsRes.json();
+        setSeats(seatsData.seats || []);
       }
       
     } catch (err) {
@@ -69,11 +102,9 @@ export default function EventDetailsPage() {
 
   const fetchCustomerData = async (eventId) => {
     try {
-      // Fetch customer data using user ID
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/user/${user._id}`);
       
       if (!response.ok) {
-        // If customer not found (404), that's okay - user might not have customer record yet
         if (response.status === 404) {
           console.log('No customer record found for this user');
           return;
@@ -82,17 +113,13 @@ export default function EventDetailsPage() {
       }
       
       const customerData = await response.json();
-      
-      // Store the customer ID
       setCustomerId(customerData._id);
       
-      // Check if the event is in the liked events array
       const liked = customerData.likedEvents?.some(id => id.toString() === eventId);
       setIsLiked(liked);
       
     } catch (err) {
       console.error('Error fetching customer data:', err);
-      // Don't show error to user - just log it
     }
   };
 
@@ -108,9 +135,7 @@ export default function EventDetailsPage() {
       return;
     }
 
-    if (likingInProgress) {
-      return;
-    }
+    if (likingInProgress) return;
 
     try {
       setLikingInProgress(true);
@@ -120,21 +145,15 @@ export default function EventDetailsPage() {
       
       const response = await fetch(endpoint, {
         method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId: event._id })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to update like status' }));
-        throw new Error(errorData.message || 'Failed to update like status');
+        throw new Error('Failed to update like status');
       }
 
-      // Update local state optimistically
       setIsLiked(!isLiked);
-      
-      // Update the event's like count in the local state
       setEvent(prevEvent => ({
         ...prevEvent,
         likes: (prevEvent.likes || 0) + (isLiked ? -1 : 1)
@@ -146,6 +165,79 @@ export default function EventDetailsPage() {
     } finally {
       setLikingInProgress(false);
     }
+  };
+
+  const handleSeatClick = (seat) => {
+    setSelectedSeats(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(seat._id)) {
+        newSet.delete(seat._id);
+      } else {
+        if (newSet.size >= 10) {
+          alert('Maximum 10 seats can be selected at once');
+          return prev;
+        }
+        newSet.add(seat._id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleCheckout = async () => {
+    if (selectedSeats.size === 0) {
+      alert('Please select at least one seat');
+      return;
+    }
+
+    if (!user || !customerId) {
+      alert('Please login to book tickets');
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/hold`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: event._id,
+          seatIds: Array.from(selectedSeats),
+          customerId: customerId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Some seats are no longer available');
+      }
+
+      const { holdToken, expiresAt } = await response.json();
+      
+      sessionStorage.setItem('holdToken', holdToken);
+      sessionStorage.setItem('holdExpiry', expiresAt);
+      sessionStorage.setItem('selectedSeats', JSON.stringify(Array.from(selectedSeats)));
+      
+      router.push(`/checkout?eventId=${event._id}&holdToken=${holdToken}`);
+      
+    } catch (error) {
+      console.error('Error holding seats:', error);
+      alert(error.message || 'Failed to reserve seats. Please try again.');
+      fetchEventDetails(params.id);
+    }
+  };
+
+  const calculateTotal = () => {
+    let total = 0;
+    selectedSeats.forEach(seatId => {
+      const seat = seats.find(s => s._id === seatId);
+      if (seat && event.zones) {
+        const zone = event.zones.find(z => z._id === seat.zoneId);
+        if (zone) {
+          total += zone.price;
+        }
+      }
+    });
+    return total;
   };
 
   const formatDate = (dateString) => {
@@ -167,43 +259,9 @@ export default function EventDetailsPage() {
     });
   };
 
-  const getEventImage = (event) => {
-    if (event.image) {
-      // Handle different image formats
-      if (typeof event.image === 'string') {
-        if (event.image.startsWith('data:')) {
-          return event.image;
-        } else if (event.image.startsWith('http')) {
-          return event.image;
-        } else {
-          return `data:image/jpeg;base64,${event.image}`;
-        }
-      }
-    }
-    // Fallback to Unsplash with proper URL format
-    const searchTerm = event.type || 'event';
-    return `https://images.unsplash.com/photo-1533174072545-e8d4aa97edf9?q=80&w=1000&auto=format&fit=crop`;
-  };
-
-  const handleBooking = () => {
-    if (!selectedZone) {
-      alert('Please select a seating zone');
-      return;
-    }
-
-    const bookingData = {
-      eventId: event._id,
-      eventName: event.name,
-      zone: selectedZone,
-      quantity: ticketQuantity,
-      totalPrice: selectedZone.price * ticketQuantity,
-      eventDate: event.startDateTime
-    };
-
-    console.log('Booking:', bookingData);
-    // Navigate to checkout page or handle booking
-    // router.push(`/checkout?eventId=${event._id}&zone=${selectedZone._id}&qty=${ticketQuantity}`);
-    alert(`Booking ${ticketQuantity} ticket(s) for ${selectedZone.name} - $${selectedZone.price * ticketQuantity}`);
+  const handleSectionClick = () => {
+    // Navigate to a full-screen seating map that shows all seats
+    router.push(`/events/${event._id}/seating`);
   };
 
   if (loading) {
@@ -234,6 +292,13 @@ export default function EventDetailsPage() {
         </div>
       </div>
     );
+  }
+
+  const zonePricing = new Map();
+  if (event.zones) {
+    event.zones.forEach(zone => {
+      zonePricing.set(zone._id, zone.price);
+    });
   }
 
   return (
@@ -299,10 +364,10 @@ export default function EventDetailsPage() {
                 {/* Event Title & Type */}
                 <div>
                   <div className="flex items-center space-x-2 mb-2">
-                    <span className="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-sm font-medium">
-                      {event.type}
-                    </span>
-                    {event.status === 'ACTIVE' && (
+                     <span className="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-sm font-medium">
+                       {event.type}
+                     </span>
+                     {event.status === 'ACTIVE' && (
                       <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                         Available
                       </span>
@@ -353,136 +418,58 @@ export default function EventDetailsPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Additional Info */}
-                {event.additionalInfo && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start space-x-2">
-                      <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-900">Important Information</p>
-                        <p className="text-sm text-blue-800 mt-1">{event.additionalInfo}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <button 
+                className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={handleSectionClick}>Book Tickets</button>
               </div>
             </div>
           </div>
         </div>
       </section>
+      
+      {/* <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {venue && seats.length > 0 ? (
+          <VenueMap
+            venue={venue}
+            eventId={event._id}
+            seats={seats}
+            onSeatClick={handleSeatClick}
+            selectedSeatIds={selectedSeats}
+            zonePricing={zonePricing}
+            currency={event.currency || 'ZAR'}
+            onSectionClick={handleSectionClick}
+          />
+        ) : (
+          <div className="bg-white rounded-lg shadow-lg p-12 text-center">
+            <Ticket className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">Venue map loading...</p>
+          </div>
+        )}
+      </section>
 
-      {/* Booking Section */}
-      <section className="bg-white border-t border-gray-200 sticky bottom-0 lg:static shadow-lg lg:shadow-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Seating Zones */}
-            <div className="lg:col-span-2">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Select Your Seats</h3>
-              
-              {event.zones && event.zones.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {event.zones.map((zone) => (
-                    <div
-                      key={zone._id}
-                      onClick={() => setSelectedZone(zone)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedZone?._id === zone._id
-                          ? 'border-slate-800 bg-slate-50'
-                          : 'border-gray-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">{zone.name}</h4>
-                        <span className="text-lg font-bold text-blue-600">${zone.price}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">
-                          {zone.availableSeats || 0} seats available
-                        </span>
-                        {selectedZone?._id === zone._id && (
-                          <span className="text-slate-800 font-medium">Selected</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 bg-gray-50 rounded-lg text-center">
-                  <Ticket className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-600">Seating information coming soon</p>
-                </div>
-              )}
-            </div>
-
-            {/* Booking Summary */}
-            <div className="lg:col-span-1">
-              <div className="bg-gray-50 rounded-lg p-6 sticky top-20">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Booking Summary</h3>
-                
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Event</span>
-                    <span className="font-medium text-gray-900">{event.name}</span>
-                  </div>
-                  
-                  {selectedZone && (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Zone</span>
-                        <span className="font-medium text-gray-900">{selectedZone.name}</span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Price per ticket</span>
-                        <span className="font-medium text-gray-900">${selectedZone.price}</span>
-                      </div>
-                    </>
-                  )}
-                  
-                  <div className="flex justify-between items-center text-sm border-t border-gray-200 pt-3">
-                    <span className="text-gray-600">Quantity</span>
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => setTicketQuantity(Math.max(1, ticketQuantity - 1))}
-                        className="w-8 h-8 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
-                      >
-                        -
-                      </button>
-                      <span className="font-medium text-gray-900 w-8 text-center">{ticketQuantity}</span>
-                      <button
-                        onClick={() => setTicketQuantity(Math.min(10, ticketQuantity + 1))}
-                        className="w-8 h-8 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedZone && (
-                  <div className="flex justify-between items-center text-lg font-bold text-gray-900 mb-6 pt-4 border-t border-gray-200">
-                    <span>Total</span>
-                    <span className="text-blue-600">${selectedZone.price * ticketQuantity}</span>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleBooking}
-                  disabled={!selectedZone}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                    selectedZone
-                      ? 'bg-slate-800 hover:bg-slate-900 text-white'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {selectedZone ? 'Book Now' : 'Select a Zone'}
-                </button>
+      {selectedSeats.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-slate-900 text-white shadow-2xl z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-300">
+                  {selectedSeats.size} seat{selectedSeats.size !== 1 ? 's' : ''} selected
+                </p>
+                <p className="text-2xl font-bold">
+                  {event.currency || 'ZAR'} {calculateTotal().toFixed(2)}
+                </p>
               </div>
+              <button
+                onClick={handleCheckout}
+                className="flex items-center space-x-2 px-8 py-3 bg-white text-slate-900 rounded-lg font-bold hover:bg-gray-100 transition-colors"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                <span>Continue to Checkout</span>
+              </button>
             </div>
           </div>
         </div>
-      </section>
+      )} */}
     </div>
   );
 }
