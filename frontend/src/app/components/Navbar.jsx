@@ -79,57 +79,71 @@ export default function Navbar() {
   return (
     <>
       {/* Top Navigation Bar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-20 h-12 rounded-lg flex items-center justify-center">
-                <div className="relative w-20 h-12">
-                  <Image
-                    src="/EP_Logo_nobg.png"
-                    // src="https://emperorspalace.com/wp-content/uploads/Emperors-Palace-Logo-Gold.svg"
-                    alt="Emperors Palace Logo"
-                    fill
-                    className="object-contain p-1"
-                  />
-                </div>
-              </div>
-              <h1 className="text-xl font-semibold text-gray-900">EMPERORS PALACE</h1>
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="relative w-full h-16 px-6 flex items-center">
+
+          {/* LEFT — Logo */}
+          <div className="flex items-center gap-3">
+            <div className="relative w-20 h-12">
+              <Image
+                src="/EP_Logo_nobg.png"
+                alt="Emperors Palace Logo"
+                fill
+                className="object-contain"
+              />
             </div>
-            <nav className="hidden md:flex space-x-6">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.path);
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => handleNavigation(item.path)}
-                    className={`flex items-center space-x-2 py-2 transition-colors text-md ${active
-                        ? "text-slate-800 font-medium border-b-2 border-slate-800"
-                        : "text-gray-500 hover:text-gray-700"
-                      }`}
-                  >
-                    <Icon className={`w-5 h-5 ${active ? "text-slate-800" : ""}`} />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-            <div className="flex items-center space-x-4">
-              {/* <span className="text-sm text-gray-600 hidden sm:block">{user?.name || "User"}</span> */}
-              <button className="text-sm text-gray-600 hidden bg-gray-200 p-1 rounded-lg sm:block hover:cursor-pointer hover:bg-gray-300 hover:text-black" onClick={() => router.push('/profile')}>{user?.name || "User"}</button>
-              {user?.role === "ADMIN" && <span className="px-2 py-1 bg-slate-100 text-slate-800 text-xs font-medium rounded">
-                {user?.role}
-              </span>}
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            </div>
+            <h1 className="hidden lg:block text-lg tracking-wide font-semibold text-gray-900">
+              EMPERORS PALACE
+            </h1>
           </div>
+
+          {/* CENTER — Nav Items */}
+          <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-10">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
+
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => handleNavigation(item.path)}
+                  className={`group relative flex items-center gap-2 text-sm tracking-wide transition-all
+                    ${active
+                      ? "text-gray-900 font-medium"
+                      : "text-gray-500 hover:text-gray-900"
+                    }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+
+                  {/* Underline */}
+                  <span
+                    className={`absolute -bottom-2 left-0 h-[2px] bg-gray-900 transition-all duration-300
+                      ${active ? "w-full" : "w-0 group-hover:w-full"}
+                    `}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          {/* RIGHT — Profile */}
+          <div className="ml-auto flex items-center gap-4">
+            <button
+              onClick={() => router.push("/profile")}
+              className="w-9 h-9 flex items-center justify-center rounded-full
+                        bg-slate-800 text-white text-sm font-semibold
+                        hover:bg-slate-700 transition border border-slate-900 hover:cursor-pointer"
+            >
+              {(user?.name?.[0] || "U").toUpperCase()}
+            </button>
+            {user?.role === "ADMIN" && (
+              <span className="text-xs px-2 py-1 border border-gray-400 rounded tracking-wide">
+                ADMIN
+              </span>
+            )}
+          </div>
+
         </div>
       </nav>
 

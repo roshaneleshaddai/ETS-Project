@@ -93,7 +93,8 @@ export default function FavoritesPage() {
   };
 
   const handleUnlike = async (eventId, e) => {
-    e.stopPropagation(); // Prevent event card click
+    e.preventDefault();
+    e.stopPropagation();
 
     if (!customerId) {
       alert('Unable to process unlike. Please refresh the page and try again.');
@@ -152,9 +153,10 @@ export default function FavoritesPage() {
     });
   };
 
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="flex items-center justify-center pt-32">
           <div className="text-center">
@@ -168,7 +170,7 @@ export default function FavoritesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
@@ -188,36 +190,43 @@ export default function FavoritesPage() {
 
   return (
     <RoleGuard allowedRoles={["CUSTOMER"]}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <Navbar />
         
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
-          {/* Header */}
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-20 md:pb-8">
+          {/* Header Section */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-
-            <button
-              onClick={() => router.back()}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3 mb-2">
-              <Heart className="w-8 h-8 text-red-500 fill-red-500" />
-              <h1 className="text-3xl font-bold text-gray-900">My Favorite Events</h1>
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={() => router.back()}
+                className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium hidden sm:inline">Back</span>
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Heart className="w-6 h-6 text-red-600 fill-red-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">My Favorite Events</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  {likedEvents.length === 0 
+                    ? "You haven't liked any events yet" 
+                    : `${likedEvents.length} favorite event${likedEvents.length !== 1 ? 's' : ''} saved`
+                  }
+                </p>
+              </div>
             </div>
           </div>
-          <p className="text-gray-600 p-2 mb-2">
-              {likedEvents.length === 0 
-                ? "You haven't liked any events yet" 
-                : `You have ${likedEvents.length} favorite event${likedEvents.length !== 1 ? 's' : ''}`
-              }
-            </p>
+
           {likedEvents.length === 0 ? (
             /* Empty State */
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+            <div className="bg-white border border-gray-200 rounded-lg p-12 text-center shadow-sm">
               <div className="max-w-md mx-auto">
-                <div className="bg-gray-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                <div className="bg-gray-50 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6 border border-gray-200">
                   <HeartOff className="w-12 h-12 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -228,14 +237,14 @@ export default function FavoritesPage() {
                 </p>
                 <button
                   onClick={() => router.push('/')}
-                  className="px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors font-medium"
+                  className="px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors font-medium shadow-sm"
                 >
                   Discover Events
                 </button>
               </div>
             </div>
           ) : (
-            /* Events Grid */
+            /* Events Grid - Simple style like customer page */
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
               {likedEvents.map((event) => (
                 <div
@@ -243,14 +252,13 @@ export default function FavoritesPage() {
                   onClick={() => handleEventClick(event._id)}
                   className="group cursor-pointer"
                 >
-                  <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 bg-gray-200 shadow-md hover:shadow-xl transition-shadow duration-300">
+                  <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 bg-gray-200">
                     <img 
                       src={event.image}
-                      // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
                       alt={event.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
+                        e.target.src = 'https://via.placeholder.com/400x600/f3f4f6/1f2937?text=' + encodeURIComponent(event.name);
                       }}
                     />
                     
@@ -259,15 +267,27 @@ export default function FavoritesPage() {
                       <button 
                         onClick={(e) => handleUnlike(event._id, e)}
                         disabled={unlikingInProgress.has(event._id)}
-                        className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all ${
+                        className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all z-10 ${
                           unlikingInProgress.has(event._id) ? 'opacity-50 cursor-wait' : ''
                         }`}
                         title="Remove from favorites"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onMouseUp={(e) => e.stopPropagation()}
                       >
                         <Heart 
                           className="w-4 h-4 fill-red-500 text-red-500"
                         />
                       </button>
+                    </div>
+
+                    {/* Likes Count Badge */}
+                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-3 h-3 fill-red-500 text-red-500" />
+                        <span className="text-white text-xs font-semibold">
+                          {formatLikes(event.likes || 0)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Status Badge */}
@@ -276,43 +296,23 @@ export default function FavoritesPage() {
                         Available
                       </div>
                     )}
-
-                    {/* Gradient Overlay on Hover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
-
-                  {/* Event Info */}
+                  
+                  {/* Simple Event Info - Like customer page */}
                   <div>
-                    <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1 group-hover:text-slate-800 transition-colors">
+                    <h3 className="font-semibold text-gray-900 text-md line-clamp-2 mb-1">
                       {event.name}
                     </h3>
-                    
-                    <div className="flex items-center text-xs text-gray-500 mb-1">
-                      <Calendar className="w-3 h-3 mr-1" />
+                    <p className="text-sm text-gray-800">{event.type}</p>
+                    <div className="flex items-center text-sm text-gray-800">
+                          <Calendar className="w-3 h-3 mr-1" />
                       <span>{formatDate(event.startDateTime)}</span>
-                    </div>
-
-                    {event.venue?.name && (
-                      <div className="flex items-center text-xs text-gray-500 mb-1">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        <span className="line-clamp-1">{event.venue.name}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded">
-                        {event.type}
-                      </span>
-                      <span className="text-xs text-gray-600">
-                        {formatLikes(event.likes || 0)}❤️
-                      </span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          </div>
         </div>
       </div>
     </RoleGuard>

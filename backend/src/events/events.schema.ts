@@ -79,7 +79,7 @@ export class Event {
   @Prop({ type: Map, of: Number })
   zonePricing?: Map<string, number>;
 
-  @Prop({ default: 'USD' })
+  @Prop({ default: 'R' })
   currency: string;
 
   /**
