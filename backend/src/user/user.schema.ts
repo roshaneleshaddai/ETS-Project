@@ -13,8 +13,8 @@ export enum UserRole {
 
 @Schema()
 class AuthDetails {
-  @Prop({ required: true })
-  passwordHash: string;
+  @Prop({ required: false }) // optional for OTP-only users
+  passwordHash?: string;
 
   @Prop({ default: false })
   mfaEnabled: boolean;
@@ -31,8 +31,8 @@ export class User {
   @Prop({ required: true, unique: true, index: true })
   email: string;
 
-  @Prop({ required: true, unique: true, index: true })
-  phone: string;
+  @Prop({ required: false, unique: true, sparse: true, index: true })
+  phone?: string;
 
   @Prop({ type: String, enum: UserRole, index: true })
   role: UserRole;
@@ -40,8 +40,8 @@ export class User {
   @Prop({ type: [String], default: [] })
   permissions: string[];
 
-  @Prop({ type: AuthDetailsSchema, required: true })
-  auth: AuthDetails;
+  @Prop({ type: AuthDetailsSchema, required: false })
+  auth?: AuthDetails;
 
   @Prop({ default: true })
   isActive: boolean;

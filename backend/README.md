@@ -31,6 +31,28 @@
 $ npm install
 ```
 
+### Email OTP login / signup (manual steps)
+
+1. **Redis** – OTP codes are stored in Redis. Ensure Redis is running (e.g. `redis://localhost:6379` or set `REDIS_URL` in `.env`).
+
+2. **Backend dependencies** – From `backend/` run:
+   ```bash
+   npm install
+   ```
+   This installs `nodemailer` (and `@types/nodemailer` in dev) used for sending OTP emails.
+
+3. **Sending OTP emails**
+   - **Without SMTP (dev):** If you do not set SMTP env vars, the backend logs the OTP to the server console (e.g. `[OTP] No SMTP configured. OTP for user@example.com: 123456`). Use that code to sign in.
+   - **With SMTP:** Add to `backend/.env`:
+     - `SMTP_HOST` – e.g. `smtp.gmail.com`
+     - `SMTP_PORT` – e.g. `587`
+     - `SMTP_USER` – your email
+     - `SMTP_PASS` – app password (for Gmail use an [App Password](https://support.google.com/accounts/answer/185833))
+     - `SMTP_FROM` (optional) – sender address; defaults to `SMTP_USER`
+     - `APP_NAME` (optional) – used in the email body; defaults to `ETS`
+
+4. **Frontend** – No extra config. The login page has an “Email OTP” tab: user enters email (and name for signup), requests a code, then enters the 6-digit OTP to sign in or create an account.
+
 ## Compile and run the project
 
 ```bash

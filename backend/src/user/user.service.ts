@@ -52,7 +52,8 @@ export class UserService {
 
   async update(id: string, user: User): Promise<User> {
     try {
-      const res = await this.userModel.findByIdAndUpdate(id, user);
+      console.log(`[DEBUG] Updating user ${id}`, JSON.stringify(user));
+      const res = await this.userModel.findByIdAndUpdate(id, user, { new: true });
       if (!res) {
         throw new Error('User not found');
       }
