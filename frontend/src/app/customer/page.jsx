@@ -307,7 +307,7 @@ export default function CustomerHomePage({ user, logout }) {
       {/* Search Bar */}
       <div className="bg-white border-b border-gray-200">
         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          <div className="relative w-full max-w-7xl mx-auto">
+          <div className="relative w-full w-full mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
@@ -340,10 +340,9 @@ export default function CustomerHomePage({ user, logout }) {
                     >
                       <div className="relative rounded-xl overflow-hidden aspect-[24/9] bg-gray-900">
                         <img 
-                          src={event.image} 
-                        // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
+                          src={getEventImage(event)}
                           alt={event.name}
-                          className="w-full h-full object-fill"
+                          className="w-full h-full object-cover"
                           onError={(e) => {
                             e.target.src = 'https://via.placeholder.com/1200x500/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
                           }}
@@ -449,18 +448,32 @@ export default function CustomerHomePage({ user, logout }) {
                       src={event.image} 
                     // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
                       alt={event.name}
-                      className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         e.target.src = 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
                       }}
                     />
+                    
+                    {/* Likes Count Badge */}
+                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-3 h-3 fill-red-500 text-red-500" />
+                        <span className="text-white text-xs font-semibold">
+                          {formatLikes(event.likes || 0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Heart Button */}
                     <div className="absolute top-2 right-2">
                       <button 
                         onClick={(e) => handleLikeToggle(event._id, e)}
                         disabled={likingInProgress.has(event._id)}
-                        className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all ${
+                        className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all z-10 ${
                           likingInProgress.has(event._id) ? 'opacity-50 cursor-wait' : ''
                         }`}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onMouseUp={(e) => e.stopPropagation()}
                       >
                         <Heart className={`w-4 h-4 ${
                             likedEvents.has(event._id) ? 'fill-red-500 text-red-500' : 'text-gray-700'
@@ -468,13 +481,25 @@ export default function CustomerHomePage({ user, logout }) {
                         />
                       </button>
                     </div>
+
+                    {/* Status Badge */}
+                    {event.status === 'ACTIVE' && (
+                      <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-md font-medium">
+                        Available
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Simple Event Info */}
                   <div>
                     <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1">
                       {event.name}
                     </h3>
-                    <p className="text-xs text-gray-600">{event.type}</p>
-                    <p className="text-xs text-gray-600">{formatLikes(event.likes || 0)}❤️</p>
+                    <p className="text-sm text-gray-800">{event.type}</p>
+                    <div className="flex items-center text-sm text-gray-800">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      <span>{formatDate(event.startDateTime)}</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -517,14 +542,24 @@ export default function CustomerHomePage({ user, logout }) {
                     >
                       <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 bg-gray-200">
                         <img 
-                          src={event.image} 
-                        // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
+                          src={getEventImage(event)}
                           alt={event.name}
-                          className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           onError={(e) => {
                             e.target.src = 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
                           }}
                         />
+
+                        {/* Likes Count Badge */}
+                        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                          <div className="flex items-center gap-1">
+                            <Heart className="w-3 h-3 fill-red-500 text-red-500" />
+                            <span className="text-white text-xs font-semibold">
+                              {formatLikes(event.likes || 0)}
+                            </span>
+                          </div>
+                        </div>
+
                         <div className="absolute top-2 right-2">
                           <button 
                             onClick={(e) => handleLikeToggle(event._id, e)}
@@ -532,6 +567,8 @@ export default function CustomerHomePage({ user, logout }) {
                             className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all ${
                               likingInProgress.has(event._id) ? 'opacity-50 cursor-wait' : ''
                             }`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onMouseUp={(e) => e.stopPropagation()}
                           >
                             <Heart className={`w-4 h-4 ${
                                 likedEvents.has(event._id) ? 'fill-red-500 text-red-500' : 'text-gray-700'
@@ -545,13 +582,14 @@ export default function CustomerHomePage({ user, logout }) {
                           </div>
                         )}
                       </div>
+                      
+                      {/* Simple Event Info */}
                       <div>
                         <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1">
                           {event.name}
                         </h3>
-                        <p className="text-xs text-gray-600 mb-1">{event.venue?.name || 'Venue TBA'}</p>
-                        <p className="text-xs text-gray-600">{formatLikes(event.likes || 0)}❤️</p>
-                        <div className="flex items-center text-xs text-gray-500">
+                        <p className="text-sm text-gray-800">{event.type}</p>
+                        <div className="flex items-center text-sm text-gray-800">
                           <Calendar className="w-3 h-3 mr-1" />
                           <span>{formatDate(event.startDateTime)}</span>
                         </div>

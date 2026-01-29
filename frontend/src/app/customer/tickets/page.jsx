@@ -184,7 +184,7 @@ export default function MyTicketsPage() {
             <Navbar />
 
             <header className="bg-white border-b border-slate-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                         <div>
                             <h1 className="text-4xl font-black text-slate-900 font-display mb-2">My Tickets</h1>
@@ -201,7 +201,7 @@ export default function MyTicketsPage() {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 {tickets.length === 0 ? (
                     <div className="bg-white rounded-3xl p-16 text-center shadow-sm border border-slate-200">
                         <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">

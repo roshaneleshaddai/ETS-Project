@@ -279,7 +279,7 @@ export default function EventSeatingPage() {
       <Navbar />
 
       <header className="bg-white top-0 z-40 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}
             className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
@@ -293,7 +293,7 @@ export default function EventSeatingPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 relative">
         {isLocking && (
           <div className="absolute inset-0 z-50 bg-white/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
             <div className="bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3">
@@ -315,7 +315,7 @@ export default function EventSeatingPage() {
 
       {selectedSeats.size > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-slate-900 text-white shadow-2xl z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-300">
