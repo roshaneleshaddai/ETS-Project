@@ -5,7 +5,6 @@ import { Cron } from '@nestjs/schedule';
 import Redis from 'ioredis';
 import { EventGateway } from '../events/events.gateway';
 import { Seat, SeatDocument, SeatStatus } from './seats.schema';
-import { SeatLock, SeatLockDocument } from './seat-lock.schema';
 
 export interface HoldSeatsDto {
   eventId: string;
@@ -34,7 +33,6 @@ export class SeatsService {
     @InjectModel('Event') private eventModel: Model<any>,
     @InjectModel('Venue') private venueModel: Model<any>,
     @InjectModel('Zone') private zoneModel: Model<any>,
-    @InjectModel('SeatLock') private seatLockModel: Model<SeatLockDocument>,
     @InjectModel('Ticket') private ticketModel: Model<any>,
     @InjectConnection() private connection: Connection,
     @Inject('REDIS_CLIENT') private redis: Redis,
@@ -51,36 +49,9 @@ export class SeatsService {
         throw new BadRequestException('Venue not found');
       }
 
-      const zones = await this.zoneModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
-
-      const seatsToCreate: any[] = [];
-
-      for (const section of venue.sections) {
-        const zone = zones.find(z => z.name === section.name || z.name.includes(section.sectionId));
-
-        if (!zone) {
-          console.warn(`No zone found for section ${section.sectionId}`);
-          continue;
-        }
-
-        for (const seatConfig of section.seats) {
-          seatsToCreate.push({
-            eventId: new Types.ObjectId(eventId),
-            zoneId: zone._id,
-            row: seatConfig.row,
-            seatNumber: seatConfig.seatNumber.toString(),
-            status: SeatStatus.AVAILABLE,
-            position: seatConfig.position,
-            isAccessible: seatConfig.isAccessible || false,
-            isAisle: seatConfig.isAisle || false,
-          });
-        }
-      }
-
-      if (seatsToCreate.length > 0) {
-        await this.seatModel.insertMany(seatsToCreate);
-        console.log(`Initialized ${seatsToCreate.length} seats for event ${eventId}`);
-      }
+      // In the optimized "Sparse State" architecture, we don't create AVAILABLE seats in MongoDB.
+      // We only store seats that are SOLD or PERMANENTLY BLOCKED.
+      console.log(`Initialized Sparse State for event ${eventId} at venue ${venue.name}`);
     } catch (error) {
       console.error('Error initializing seats:', error);
       throw error;
@@ -91,68 +62,121 @@ export class SeatsService {
    * Get all seats for an event
    */
   async getEventSeats(eventId: string): Promise<SeatResponse[]> {
-    const seats = await this.seatModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
-    if (seats.length === 0) return [];
+    const event = await this.eventModel.findById(eventId).lean();
+    if (!event) throw new BadRequestException('Event not found');
 
-    const redisKeys = seats.map(s => `lock:event:${eventId}:seat:${s._id}`);
-    const locks = await this.redis.mget(...redisKeys);
+    const venue = await this.venueModel.findById(event.venue || event.venueId).lean();
+    if (!venue) throw new BadRequestException('Venue not found');
+    if (!venue.sections || !Array.isArray(venue.sections)) {
+      console.warn(`Venue ${venue._id} has no valid sections array`);
+      return [];
+    }
 
-    return seats.map((seat, index) => {
-      const response = this.mapSeatToResponse(seat);
-      const lockedBy = locks[index];
+    const zones = await this.zoneModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
+    const persistentSeats = await this.seatModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
 
-      if (lockedBy) {
-        response.status = SeatStatus.LOCKED;
-        response.heldBy = lockedBy;
-      } else if (seat.status === SeatStatus.LOCKED || seat.status === SeatStatus.HELD) {
-        if (seat.status === SeatStatus.HELD && seat.holdExpiresAt && seat.holdExpiresAt > new Date()) {
-          // Keep HELD
+    const allSeats: SeatResponse[] = [];
+
+    for (const section of venue.sections) {
+      const zone = zones.find((z: any) =>
+        z.name === section.name || z.name.includes(section.sectionId) || z.sectionId === section.sectionId
+      );
+      if (!zone) continue;
+
+      const seatUids = section.seats.map((s: any) => `${section.sectionId}:${s.row}:${s.seatNumber}`);
+      const redisKeys = seatUids.map(uid => `lock:event:${eventId}:seat:${uid}`);
+      const locks = await this.redis.mget(...redisKeys);
+
+      section.seats.forEach((seatConfig: any, index: number) => {
+        const uid = seatUids[index];
+        const virtualId = `${eventId}:${uid}`;
+        const lockedBy = locks[index];
+        const persistent = persistentSeats.find(ps =>
+          ps.sectionId === section.sectionId &&
+          ps.row === seatConfig.row &&
+          ps.seatNumber === seatConfig.seatNumber.toString()
+        );
+
+        if (persistent) {
+          allSeats.push(this.mapSeatToResponse(persistent));
         } else {
-          response.status = SeatStatus.AVAILABLE;
-          delete response.heldBy;
+          allSeats.push({
+            _id: virtualId,
+            eventId,
+            zoneId: zone._id.toString(),
+            row: seatConfig.row,
+            seatNumber: seatConfig.seatNumber.toString(),
+            status: lockedBy ? SeatStatus.LOCKED : SeatStatus.AVAILABLE,
+            heldBy: lockedBy || undefined,
+            position: seatConfig.position,
+            isAccessible: seatConfig.isAccessible,
+            isAisle: seatConfig.isAisle
+          });
         }
-      }
+      });
+    }
 
-      return response;
-    });
+    return allSeats;
   }
 
   /**
    * Get seats by zone
    */
   async getSeatsByZone(eventId: string, zoneId: string): Promise<SeatResponse[]> {
-    const seats = await this.seatModel.find({
+    const event = await this.eventModel.findById(eventId).lean();
+    if (!event) throw new BadRequestException('Event not found');
+
+    const venue = await this.venueModel.findById(event.venue || event.venueId).lean();
+    if (!venue) throw new BadRequestException('Venue not found');
+    if (!venue.sections || !Array.isArray(venue.sections)) {
+      console.warn(`Venue ${venue._id} has no valid sections array`);
+      return [];
+    }
+
+    const zone = await this.zoneModel.findById(zoneId).lean();
+
+    // Find the section that matches this zone
+    const section = venue.sections.find((s: any) =>
+      s.sectionId === zone.name || s.name === zone.name || s.sectionId === zone.sectionId
+    );
+    if (!section) return [];
+
+    // Get Persistent Seats from DB (Sparse: only SOLD/BLOCKED)
+    const persistentSeats = await this.seatModel.find({
       eventId: new Types.ObjectId(eventId),
       zoneId: new Types.ObjectId(zoneId)
     }).lean();
 
-    if (seats.length === 0) return [];
-
-    // Fetch all locks for these seats from Redis in one go
-    const redisKeys = seats.map(s => `lock:event:${eventId}:seat:${s._id}`);
+    // Get Redis Locks
+    // We use a virtual ID format: eventId:sectionId:row:seatNumber
+    const seatUids = section.seats.map((s: any) => `${section.sectionId}:${s.row}:${s.seatNumber}`);
+    const redisKeys = seatUids.map(uid => `lock:event:${eventId}:seat:${uid}`);
     const locks = await this.redis.mget(...redisKeys);
 
-    return seats.map((seat, index) => {
-      const response = this.mapSeatToResponse(seat);
+    return section.seats.map((seatConfig: any, index: number) => {
+      const uid = seatUids[index];
+      const virtualId = `${eventId}:${uid}`;
       const lockedBy = locks[index];
+      const persistent = persistentSeats.find(ps =>
+        ps.row === seatConfig.row && ps.seatNumber === seatConfig.seatNumber.toString()
+      );
 
-      if (lockedBy) {
-        // If it's in Redis, it's definitely LOCKED
-        response.status = SeatStatus.LOCKED;
-        response.heldBy = lockedBy;
-      } else if (seat.status === SeatStatus.LOCKED || seat.status === SeatStatus.HELD) {
-        // If it's NOT in Redis but status is LOCKED/HELD in DB, 
-        // it means the lock expired or it's a legacy hold.
-        // We check holdExpiresAt for HELD.
-        if (seat.status === SeatStatus.HELD && seat.holdExpiresAt && seat.holdExpiresAt > new Date()) {
-          // Keep HELD if not expired
-        } else {
-          response.status = SeatStatus.AVAILABLE;
-          delete response.heldBy;
-        }
+      if (persistent) {
+        return this.mapSeatToResponse(persistent);
       }
 
-      return response;
+      return {
+        _id: virtualId,
+        eventId,
+        zoneId,
+        row: seatConfig.row,
+        seatNumber: seatConfig.seatNumber.toString(),
+        status: lockedBy ? SeatStatus.LOCKED : SeatStatus.AVAILABLE,
+        heldBy: lockedBy || undefined,
+        position: seatConfig.position,
+        isAccessible: seatConfig.isAccessible,
+        isAisle: seatConfig.isAisle
+      };
     });
   }
 
@@ -160,36 +184,55 @@ export class SeatsService {
    * Get available seat count by zone
    */
   async getAvailableSeatsByZone(eventId: string): Promise<Record<string, number>> {
-    const seats = await this.seatModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
-    if (seats.length === 0) return {};
+    const event = await this.eventModel.findById(eventId).lean();
+    if (!event) return {};
 
-    const redisKeys = seats.map(s => `lock:event:${eventId}:seat:${s._id}`);
-    const locks = await this.redis.mget(...redisKeys);
+    const venue = await this.venueModel.findById(event.venue || event.venueId).lean();
+    if (!venue) return {};
+    if (!venue.sections || !Array.isArray(venue.sections)) {
+      console.warn(`Venue ${venue._id} has no valid sections array`);
+      return {};
+    }
+
+    const zones = await this.zoneModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
+    const persistentSeats = await this.seatModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
 
     const zoneAvailability: Record<string, number> = {};
+    const allRedisKeys: string[] = [];
+    const sectionKeyMaps: Array<{ zId: string, keys: string[] }> = [];
 
-    seats.forEach((seat, index) => {
-      const lockedBy = locks[index];
-      let isAvailable = seat.status === SeatStatus.AVAILABLE;
+    for (const section of venue.sections) {
+      const zone = zones.find((z: any) =>
+        z.name === section.name || z.name.includes(section.sectionId) || z.sectionId === section.sectionId
+      );
+      if (!zone) continue;
 
-      // Passive release check
-      if (seat.status === SeatStatus.LOCKED && !lockedBy) {
-        isAvailable = true;
-      }
-      if (seat.status === SeatStatus.HELD && seat.holdExpiresAt && seat.holdExpiresAt < new Date()) {
-        isAvailable = true;
-      }
+      const zId = zone._id.toString();
+      const seatUids = section.seats.map((s: any) => `${section.sectionId}:${s.row}:${s.seatNumber}`);
+      const redisKeys = seatUids.map(uid => `lock:event:${eventId}:seat:${uid}`);
 
-      // If it's in Redis, it's NOT available
-      if (lockedBy) {
-        isAvailable = false;
-      }
+      allRedisKeys.push(...redisKeys);
+      sectionKeyMaps.push({ zId, keys: redisKeys });
 
-      if (isAvailable) {
-        const zId = seat.zoneId.toString();
-        zoneAvailability[zId] = (zoneAvailability[zId] || 0) + 1;
-      }
-    });
+      // Initial count from layout minus persistent occupied
+      const persistentInSection = persistentSeats.filter(ps => ps.sectionId === section.sectionId);
+      const occupiedInDB = persistentInSection.filter(ps =>
+        [SeatStatus.SOLD, SeatStatus.BLOCKED].includes(ps.status as any)
+      ).length;
+
+      zoneAvailability[zId] = (zoneAvailability[zId] || 0) + (section.seats.length - occupiedInDB);
+    }
+
+    // Batch fetch all locks
+    if (allRedisKeys.length > 0) {
+      const allLocks = await this.redis.mget(...allRedisKeys);
+      const lockMap = new Map(allRedisKeys.map((key, i) => [key, allLocks[i]]));
+
+      sectionKeyMaps.forEach(({ zId, keys }) => {
+        const lockedCount = keys.filter(k => !!lockMap.get(k)).length;
+        zoneAvailability[zId] = Math.max(0, zoneAvailability[zId] - lockedCount);
+      });
+    }
 
     return zoneAvailability;
   }
@@ -198,6 +241,55 @@ export class SeatsService {
    * Get seat by ID
    */
   async getSeatById(seatId: string): Promise<SeatResponse | null> {
+    // Check if it's a virtual ID (format: eventId:sectionId:row:seatNumber)
+    const virtualParts = this.parseVirtualId(seatId);
+
+    if (virtualParts) {
+      // Virtual seat - reconstruct from venue layout
+      const { eventId, sectionId, row, seatNumber } = virtualParts;
+
+      const event = await this.eventModel.findById(eventId).lean();
+      if (!event) return null;
+
+      const venue = await this.venueModel.findById(event.venue || event.venueId).lean();
+      if (!venue || !venue.sections) return null;
+
+      const section = venue.sections.find((s: any) => s.sectionId === sectionId);
+      if (!section || !section.seats) return null;
+
+      const seatConfig = section.seats.find((s: any) =>
+        s.row === row && s.seatNumber.toString() === seatNumber
+      );
+
+      if (!seatConfig) return null;
+
+      // Find the zone for this section
+      const zones = await this.zoneModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
+      const zone = zones.find((z: any) =>
+        z.name === section.name || z.name.includes(section.sectionId)
+      );
+
+      if (!zone) return null;
+
+      // Check Redis for lock status
+      const redisKey = `lock:event:${eventId}:seat:${sectionId}:${row}:${seatNumber}`;
+      const lockedBy = await this.redis.get(redisKey);
+
+      return {
+        _id: seatId,
+        eventId,
+        zoneId: zone._id.toString(),
+        row,
+        seatNumber,
+        status: lockedBy ? SeatStatus.LOCKED : SeatStatus.AVAILABLE,
+        heldBy: lockedBy || undefined,
+        position: seatConfig.position,
+        isAccessible: seatConfig.isAccessible,
+        isAisle: seatConfig.isAisle
+      };
+    }
+
+    // MongoDB ID - fetch from database
     const seat = await this.seatModel.findById(seatId).lean();
     return seat ? this.mapSeatToResponse(seat) : null;
   }
@@ -217,8 +309,18 @@ export class SeatsService {
       throw new BadRequestException('No seats selected');
     }
 
-    // 1. Validate Ownership in Redis
-    const redisKeys = seatIds.map(id => `lock:event:${eventId}:seat:${id}`);
+    // 1. Validate Ownership in Redis and Prepare Keys
+    const redisKeys: string[] = [];
+    const seatMetas: any[] = [];
+
+    for (const id of seatIds) {
+      const v = this.parseVirtualId(id);
+      const uid = v ? `${v.sectionId}:${v.row}:${v.seatNumber}` : id;
+      const key = `lock:event:${eventId}:seat:${uid}`;
+      redisKeys.push(key);
+      seatMetas.push(v);
+    }
+
     const locks = await this.redis.mget(...redisKeys);
 
     for (let i = 0; i < seatIds.length; i++) {
@@ -227,7 +329,7 @@ export class SeatsService {
       }
     }
 
-    // 2. Extend/Convert locks to "HELD" in Redis (just a longer TTL)
+    // 2. Extend/Convert locks to "HELD" in Redis
     const event = await this.eventModel.findById(eventId).lean();
     const holdTimeoutMinutes = event.seatHoldTimeout || 2;
     const holdExpiry = new Date(Date.now() + holdTimeoutMinutes * 60 * 1000);
@@ -238,11 +340,43 @@ export class SeatsService {
     });
     await pipeline.exec();
 
-    // 3. Prepare response (Stateless)
-    const seatObjectIds = seatIds.map(id => new Types.ObjectId(id));
-    const heldSeats = await this.seatModel.find({
-      _id: { $in: seatObjectIds }
-    }).lean();
+    // 3. Prepare response (Stateless Merge)
+    const venue = await this.venueModel.findById(event.venue || event.venueId).lean();
+    if (!venue) throw new BadRequestException('Venue not found');
+    if (!venue.sections || !Array.isArray(venue.sections)) {
+      throw new BadRequestException('Venue has invalid sections data');
+    }
+
+    const zones = await this.zoneModel.find({ eventId: new Types.ObjectId(eventId) }).lean();
+
+    const seats: SeatResponse[] = [];
+    for (let i = 0; i < seatIds.length; i++) {
+      const id = seatIds[i];
+      const v = seatMetas[i];
+
+      if (v) {
+        const section = venue.sections.find((s: any) => s.sectionId === v.sectionId);
+        const seatConfig = section?.seats.find((s: any) => s.row === v.row && s.seatNumber.toString() === v.seatNumber);
+        const zone = zones.find((z: any) => z.name === section?.name || z.name.includes(section?.sectionId));
+
+        seats.push({
+          _id: id,
+          eventId,
+          zoneId: zone?._id.toString() || '',
+          row: v.row,
+          seatNumber: v.seatNumber,
+          status: SeatStatus.HELD,
+          heldBy: customerId,
+          position: seatConfig?.position,
+          isAccessible: seatConfig?.isAccessible,
+          isAisle: seatConfig?.isAisle
+        });
+      } else {
+        // Persistent seat from MongoDB
+        const persistent = await this.seatModel.findById(id).lean();
+        if (persistent) seats.push(this.mapSeatToResponse(persistent));
+      }
+    }
 
     const holdToken = this.generateHoldToken(customerId, seatIds, holdExpiry);
 
@@ -255,7 +389,7 @@ export class SeatsService {
       success: true,
       holdToken,
       expiresAt: holdExpiry,
-      seats: heldSeats.map(seat => this.mapSeatToResponse(seat)),
+      seats,
     };
   }
 
@@ -292,60 +426,94 @@ export class SeatsService {
     session.startTransaction();
 
     try {
-      const seatObjectIds = seatIds.map(id => new Types.ObjectId(id));
       const eventObjectId = new Types.ObjectId(eventId);
+      const event = await this.eventModel.findById(eventId).lean();
+      const venue = await this.venueModel.findById(event.venue || event.venueId).lean();
+      if (!venue) throw new ConflictException('Venue not found');
+      if (!venue.sections || !Array.isArray(venue.sections)) {
+        throw new ConflictException('Venue has invalid sections data');
+      }
+      const zones = await this.zoneModel.find({ eventId: eventObjectId }).lean();
 
       // 1. Final Redis Validation
-      const redisKeys = seatIds.map(id => `lock:event:${eventId}:seat:${id}`);
-      const locks = await this.redis.mget(...redisKeys);
+      const redisKeys: string[] = [];
+      const seatMetas: any[] = [];
+      for (const id of seatIds) {
+        const v = this.parseVirtualId(id);
+        const uid = v ? `${v.sectionId}:${v.row}:${v.seatNumber}` : id;
+        redisKeys.push(`lock:event:${eventId}:seat:${uid}`);
 
-      for (let i = 0; i < seatIds.length; i++) {
-        if (locks[i] !== customerId) {
-          throw new ConflictException(`Hold for seat ${seatIds[i]} has expired or was lost. Purchase failed.`);
+        if (v) {
+          const section = venue.sections.find((s: any) => s.sectionId === v.sectionId);
+          const zone = zones.find((z: any) => z.name === section?.name || z.name.includes(section?.sectionId));
+          const seatConfig = section?.seats.find((s: any) => s.row === v.row && s.seatNumber.toString() === v.seatNumber);
+
+          seatMetas.push({
+            ...v,
+            zoneId: zone?._id,
+            position: seatConfig?.position,
+            isAccessible: seatConfig?.isAccessible,
+            isAisle: seatConfig?.isAisle
+          });
+        } else {
+          const s = await this.seatModel.findById(id).lean();
+          if (s) {
+            seatMetas.push({
+              sectionId: s.sectionId,
+              row: s.row,
+              seatNumber: s.seatNumber,
+              zoneId: s.zoneId,
+              position: s.position,
+              isAccessible: s.isAccessible,
+              isAisle: s.isAisle
+            });
+          }
         }
       }
 
-      // 2. Atomic MongoDB Purchase
-      const seats = await this.seatModel.find({
-        _id: { $in: seatObjectIds },
-        eventId: eventObjectId,
-      }).session(session).lean();
-
-      // Ensure no concurrent permanent status changes occurred
-      const invalidSeats = seats.filter(
-        (seat) => [SeatStatus.SOLD, SeatStatus.BLOCKED].includes(seat.status as any)
-      );
-
-      if (invalidSeats.length > 0) {
-        throw new ConflictException('Some seats are no longer available for purchase');
+      const locks = await this.redis.mget(...redisKeys);
+      for (let i = 0; i < seatIds.length; i++) {
+        if (locks[i] !== customerId) {
+          throw new ConflictException(`Hold for seat ${seatIds[i]} has expired. Purchase failed.`);
+        }
       }
 
-      await this.seatModel.updateMany(
-        {
-          _id: { $in: seatObjectIds },
-          eventId: eventObjectId,
-        },
-        {
-          $set: { status: SeatStatus.SOLD },
-          $unset: { holdExpiresAt: '', heldBy: '' },
-        },
-        { session },
-      );
+      // 2. Atomic MongoDB Sparse Creation (SOLD)
+      const soldSeats: any[] = [];
+      for (const meta of seatMetas) {
+        const seat = await this.seatModel.findOneAndUpdate(
+          {
+            eventId: eventObjectId,
+            sectionId: meta.sectionId,
+            row: meta.row,
+            seatNumber: meta.seatNumber
+          },
+          {
+            $set: {
+              status: SeatStatus.SOLD,
+              zoneId: meta.zoneId,
+              position: meta.position,
+              isAccessible: meta.isAccessible,
+              isAisle: meta.isAisle,
+              heldBy: null,
+              holdExpiresAt: null
+            }
+          },
+          { upsert: true, new: true, session }
+        );
+        if (seat) soldSeats.push(seat);
+      }
 
       // 3. Clear Redis Locks
       await this.redis.del(...redisKeys);
 
-      const soldSeats = await this.seatModel.find({
-        _id: { $in: seatObjectIds }
-      }).session(session).lean();
-
-      // Fetch zone prices
-      const zoneIds = [...new Set(soldSeats.map(s => s.zoneId))];
-      const zones = await this.zoneModel.find({ _id: { $in: zoneIds } }).session(session).lean();
-
       // Create Tickets for each sold seat
+      // Fetch zone prices for the logic below
+      const zoneIds = [...new Set(soldSeats.map(s => s.zoneId?.toString()).filter(Boolean))];
+      const activeZones = await this.zoneModel.find({ _id: { $in: zoneIds.map(id => new Types.ObjectId(id)) } }).session(session).lean();
+
       const ticketsToCreate = soldSeats.map(seat => {
-        const zone = zones.find(z => z._id.toString() === seat.zoneId.toString());
+        const zone = activeZones.find(z => z._id.toString() === seat.zoneId?.toString());
         return {
           ticketCode: `TKT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
           eventId: seat.eventId,
@@ -380,22 +548,39 @@ export class SeatsService {
    * Part of the "Process Flow" in User Request Section 2
    */
   async lockSeat(eventSeatId: string, userId: string): Promise<{ success: boolean; expiresAt: Date }> {
-    const seat = await this.seatModel.findById(eventSeatId).lean();
-    if (!seat) {
-      throw new BadRequestException('Seat not found');
+    let eventId: string;
+    let seatUid: string;
+
+    const virtualInfo = this.parseVirtualId(eventSeatId);
+    if (virtualInfo) {
+      eventId = virtualInfo.eventId;
+      seatUid = `${virtualInfo.sectionId}:${virtualInfo.row}:${virtualInfo.seatNumber}`;
+
+      // 1. Permanent State Check (SQL/MongoDB)
+      const persistent = await this.seatModel.findOne({
+        eventId: new Types.ObjectId(eventId),
+        sectionId: virtualInfo.sectionId,
+        row: virtualInfo.row,
+        seatNumber: virtualInfo.seatNumber
+      }).lean();
+
+      if (persistent && [SeatStatus.SOLD, SeatStatus.BLOCKED].includes(persistent.status)) {
+        throw new ConflictException('Seat is no longer available');
+      }
+    } else {
+      // It's a MongoDB ID (legacy or persistent)
+      const seat = await this.seatModel.findById(eventSeatId).lean();
+      if (!seat) throw new BadRequestException('Seat not found');
+      if ([SeatStatus.SOLD, SeatStatus.BLOCKED].includes(seat.status)) {
+        throw new ConflictException('Seat is no longer available');
+      }
+      eventId = seat.eventId.toString();
+      seatUid = `${seat.sectionId}:${seat.row}:${seat.seatNumber}`;
     }
 
-    // 1. Permanent State Check (SQL/MongoDB)
-    // If the seat is already sold or blocked in the DB, it's not available
-    if ([SeatStatus.SOLD, SeatStatus.BLOCKED].includes(seat.status)) {
-      throw new ConflictException('Seat is no longer available');
-    }
-
-    const eventId = seat.eventId.toString();
-    const redisKey = `lock:event:${eventId}:seat:${eventSeatId}`;
+    const redisKey = `lock:event:${eventId}:seat:${seatUid}`;
 
     // 2. Atomic Lock via Redis Lua Script
-    // Arguments: [redisKey, userId, ttlInSeconds]
     const luaScript = `
       local lockExists = redis.call("EXISTS", KEYS[1])
       if lockExists == 0 then
@@ -404,7 +589,6 @@ export class SeatsService {
       else
         local currentLock = redis.call("GET", KEYS[1])
         if currentLock == ARGV[1] then
-          -- Refresh existing lock
           redis.call("EXPIRE", KEYS[1], ARGV[2])
           return 1
         end
@@ -424,17 +608,24 @@ export class SeatsService {
 
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
-    // Optional: Sync back to Mongo for legacy reporting if needed, 
-    // but the user's "Zero DB writes" advice says we shouldn't.
-    // However, to keep the UI consistent if it still queries Mongo, we might need it.
-    // For now, let's stick to the optimization: NO DB WRITES for locks.
-
     // Broadcast change
     this.eventGateway.broadcastSeatStatusChange(eventId, eventSeatId, SeatStatus.LOCKED);
 
     return {
       success: true,
       expiresAt,
+    };
+  }
+
+  private parseVirtualId(eventSeatId: string) {
+    if (!eventSeatId || !eventSeatId.includes(':')) return null;
+    const parts = eventSeatId.split(':');
+    if (parts.length < 4) return null;
+    return {
+      eventId: parts[0],
+      sectionId: parts[1],
+      row: parts[2],
+      seatNumber: parts[3]
     };
   }
 

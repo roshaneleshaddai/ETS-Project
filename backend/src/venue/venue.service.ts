@@ -11,7 +11,7 @@ import { Venue, VenueDocument } from './venue.schema';
 export class VenueService {
   constructor(
     @InjectModel(Venue.name) private venueModel: Model<VenueDocument>,
-  ) {}
+  ) { }
 
   /**
    * Create a new venue
@@ -93,29 +93,46 @@ export class VenueService {
     return venues;
   }
 
-  /**
-   * Get venue statistics
-   */
   async getVenueStats(venueId: string) {
     const venue = await this.findById(venueId);
 
-    const zoneStats = venue.zones.map((zone) => {
-      const zoneSeats = venue.seats.filter((seat) => seat.z_id === zone.id);
+    if (!venue.sections || !Array.isArray(venue.sections)) {
       return {
-        zoneId: zone.id,
-        name: zone.name,
-        basePrice: zone.base_price,
-        totalSeats: zoneSeats.length,
+        venueId: (venue as any)._id?.toString(),
+        venueName: venue.name,
+        city: venue.city,
+        location: venue.location,
+        totalSeats: venue.totalCapacity || 0,
+        totalSections: 0,
+        sectionStats: [],
+      };
+    }
+
+    const sectionStats = venue.sections.map((section) => {
+      return {
+        sectionId: section.sectionId,
+        name: section.name,
+        color: section.color,
+        totalSeats: section.seats?.length || 0,
       };
     });
 
+    const totalSeats = venue.sections.reduce(
+      (sum, section) => sum + (section.seats?.length || 0),
+      0
+    );
+
     return {
-      venueId: (venue as any)._id.toString(),
+      venueId: (venue as any)._id?.toString(),
       venueName: venue.name,
+      city: venue.city,
       location: venue.location,
-      totalSeats: venue.seats.length,
-      totalZones: venue.zones.length,
-      zoneStats,
+      totalSeats: totalSeats,
+      totalSections: venue.sections.length,
+      sectionStats,
+      mapDimensions: venue.mapDimensions,
+      stagePosition: venue.stagePosition,
+      isActive: venue.isActive,
     };
   }
 }

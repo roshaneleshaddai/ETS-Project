@@ -4,41 +4,42 @@ import { Document } from 'mongoose';
 export type VenueDocument = Venue & Document;
 
 @Schema({ _id: false })
-export class Zone {
-  @Prop({ required: true })
-  id: string; // z1, z2
-
-  @Prop({ required: true })
-  name: string;
-
-  @Prop({ required: true })
-  base_price: number;
-}
-
-export const ZoneSchema = SchemaFactory.createForClass(Zone);
-
-@Schema({ _id: false })
-export class Seat {
-  @Prop({ required: true })
-  s_id: string; // a1, a2
-
-  @Prop({ required: true })
-  z_id: string; // references zone.id
-
+export class VenueSeat {
   @Prop({ required: true })
   row: string;
 
   @Prop({ required: true })
-  num: number;
+  seatNumber: number;
 
-  @Prop({ required: true })
-  x: number;
+  @Prop({ type: Object })
+  position: { x: number; y: number };
 
-  @Prop({ required: true })
-  y: number;
+  @Prop()
+  isAccessible: boolean;
+
+  @Prop()
+  isAisle: boolean;
 }
+export const VenueSeatSchema = SchemaFactory.createForClass(VenueSeat);
 
-export const SeatSchema = SchemaFactory.createForClass(Seat);
+@Schema({ _id: false })
+export class Section {
+  @Prop({ required: true })
+  sectionId: string;
+
+  @Prop({ required: true })
+  name: string;
+
+  @Prop()
+  color: string;
+
+  @Prop([Object])
+  boundary: { x: number; y: number }[];
+
+  @Prop([VenueSeatSchema])
+  seats: VenueSeat[];
+}
+export const SectionSchema = SchemaFactory.createForClass(Section);
 
 @Schema({ timestamps: true })
 export class Venue {
@@ -46,13 +47,25 @@ export class Venue {
   name: string;
 
   @Prop()
+  city: string;
+
+  @Prop()
   location: string;
 
-  @Prop({ type: [ZoneSchema], required: true })
-  zones: Zone[];
+  @Prop({ type: [SectionSchema], default: [] })
+  sections: Section[];
 
-  @Prop({ type: [SeatSchema], required: true })
-  seats: Seat[];
+  @Prop({ type: Object })
+  mapDimensions: { width: number; height: number };
+
+  @Prop({ type: Object })
+  stagePosition: { x: number; y: number };
+
+  @Prop({ default: true })
+  isActive: boolean;
+
+  @Prop()
+  totalCapacity: number;
 }
 
 export const VenueSchema = SchemaFactory.createForClass(Venue);

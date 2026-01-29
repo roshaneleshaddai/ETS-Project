@@ -20,7 +20,17 @@ export class Seat {
   @Prop({ type: Types.ObjectId, ref: 'Zone' })
   zoneId!: Types.ObjectId;
 
+  @Prop() sectionId!: string;
+
+  @Prop() row!: string;
+
   @Prop() seatNumber!: string;
+
+  @Prop({ type: Object }) position?: { x: number; y: number };
+
+  @Prop() isAccessible?: boolean;
+
+  @Prop() isAisle?: boolean;
 
   @Prop({ type: String, enum: SeatStatus })
   status!: SeatStatus;
