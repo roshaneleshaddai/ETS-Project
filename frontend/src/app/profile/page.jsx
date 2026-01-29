@@ -24,7 +24,18 @@ export default function ProfilePage() {
     <RoleGuard allowedRoles={["ADMIN", "TICKETING", "GATE", "MANAGEMENT", "CUSTOMER"]}>
       <div className="min-h-screen">
         <Navbar />
-        <div className="w-full mx-auto mt-2 px-4 pb-12">
+        <div className="w-full mx-auto mt-2 px-4 sm:px-6 lg:px-8 py-2 pb-12">
+          {/* Back Button */}
+          <div className="mb-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium hidden sm:inline">Back</span>
+            </button>
+          </div>
+
           {/* Profile Header */}
           <div className="flex items-center gap-6 my-5">
             {/* Avatar */}
