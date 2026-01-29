@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from "react";
-import { Heart, Calendar, MapPin, Ticket, HeartOff } from "lucide-react";
+import { Heart, Calendar, MapPin, Ticket, HeartOff, ArrowLeft } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import RoleGuard from "@/app/components/RoleGuard";
 import { useAuth } from "@/context/AuthContext";
@@ -170,7 +170,7 @@ export default function FavoritesPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <p className="text-red-800 font-semibold mb-2">Error Loading Favorites</p>
             <p className="text-red-600 text-sm">{error}</p>
@@ -191,21 +191,28 @@ export default function FavoritesPage() {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
           {/* Header */}
           <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             <div className="flex items-center gap-3 mb-2">
               <Heart className="w-8 h-8 text-red-500 fill-red-500" />
               <h1 className="text-3xl font-bold text-gray-900">My Favorite Events</h1>
             </div>
-            <p className="text-gray-600">
+          </div>
+          <p className="text-gray-600 p-2 mb-2">
               {likedEvents.length === 0 
                 ? "You haven't liked any events yet" 
                 : `You have ${likedEvents.length} favorite event${likedEvents.length !== 1 ? 's' : ''}`
               }
             </p>
-          </div>
-
           {likedEvents.length === 0 ? (
             /* Empty State */
             <div className="bg-white rounded-xl shadow-sm p-12 text-center">
@@ -238,7 +245,8 @@ export default function FavoritesPage() {
                 >
                   <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 bg-gray-200 shadow-md hover:shadow-xl transition-shadow duration-300">
                     <img 
-                      src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
+                      src={event.image}
+                      // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
                       alt={event.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
@@ -304,6 +312,7 @@ export default function FavoritesPage() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
     </RoleGuard>

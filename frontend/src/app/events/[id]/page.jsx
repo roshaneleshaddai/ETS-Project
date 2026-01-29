@@ -67,6 +67,12 @@ export default function EventDetailsPage() {
     }
   }, [params?.id, user]);
 
+  const getEventImage = (event) => {
+    if (event.image) {
+      return event.image;
+    }
+  }
+
   const fetchEventDetails = async (eventId) => {
     try {
       setLoading(true);
@@ -279,7 +285,7 @@ export default function EventDetailsPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-2 rounded-lg mb-4">
             <p className="font-semibold">Error Loading Event</p>
             <p className="text-sm mt-1">{error || 'Event not found'}</p>
           </div>
@@ -305,9 +311,9 @@ export default function EventDetailsPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <Navbar />
-      <header className="bg-white top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      {/* <header className="bg-white top-0 z-50">
+        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-12">
             <button
               onClick={() => router.back()}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
@@ -337,24 +343,32 @@ export default function EventDetailsPage() {
             </div>
           </div>
         </div>
-      </header>
+      </header> */}
 
       {/* Event Hero */}
       <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-start space-x-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              {/* <span className="font-medium">Back</span> */}
+            </button>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Event Image */}
             <div className="lg:col-span-1">
-              <div className="relative rounded-xl overflow-hidden aspect-[3/4] shadow-lg bg-gray-200">
+              <div className="relative rounded-xl overflow-hidden aspect-[9/12] shadow-lg bg-gray-200">
                 <img 
-                //   src={getEventImage(event)} 
-                src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
+                  src={getEventImage(event)} 
+                  // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
                   alt={event.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.src = 'https://via.placeholder.com/600x800/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
                   }}
-                />
+                  />
               </div>
             </div>
 
@@ -368,7 +382,7 @@ export default function EventDetailsPage() {
                        {event.type}
                      </span>
                      {event.status === 'ACTIVE' && (
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                       <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                         Available
                       </span>
                     )}
@@ -419,9 +433,30 @@ export default function EventDetailsPage() {
                   )}
                 </div>
                 <button 
-                className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="mt-4 px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
                 onClick={handleSectionClick}>Book Tickets</button>
               </div>
+            </div>
+          </div>
+          
+                      <div className="flex items-center space-x-4">
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <Share2 className="w-5 h-5 text-gray-700" />
+              </button>
+              {user && customerId && (
+                <button 
+                  onClick={handleLikeToggle}
+                  disabled={likingInProgress}
+                  className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${
+                    likingInProgress ? 'opacity-50 cursor-wait' : ''
+                  }`}
+                >
+                  <Heart className={`w-5 h-5 ${
+                      isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700'
+                    }`}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>

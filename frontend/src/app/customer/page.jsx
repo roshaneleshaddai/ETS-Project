@@ -243,15 +243,16 @@ export default function CustomerHomePage({ user, logout }) {
 
   const getEventImage = (event) => {
     if (event.image) {
-      if (typeof event.image === 'string') {
-        if (event.image.startsWith('data:')) {
-          return event.image;
-        } else if (event.image.startsWith('http')) {
-          return event.image;
-        } else {
-          return `data:image/jpeg;base64,${event.image}`;
-        }
-      }
+      return event.image;
+      // if (typeof event.image === 'string') {
+      //   if (event.image.startsWith('data:')) {
+      //     return event.image;
+      //   } else if (event.image.startsWith('http')) {
+      //     return event.image;
+      //   } else {
+      //     return `data:image/jpeg;base64,${event.image}`;
+      //   }
+      // }
     }
     const searchTerm = event.type || 'event';
     return `https://source.unsplash.com/800x450/?${encodeURIComponent(searchTerm)},concert,entertainment`;
@@ -284,7 +285,7 @@ export default function CustomerHomePage({ user, logout }) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-2 rounded-lg mb-4">
             <p className="font-semibold">Error Loading Events</p>
             <p className="text-sm mt-1">{error}</p>
           </div>
@@ -305,8 +306,8 @@ export default function CustomerHomePage({ user, logout }) {
       
       {/* Search Bar */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="relative w-full max-w-2xl mx-auto">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="relative w-full max-w-7xl mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
@@ -314,7 +315,7 @@ export default function CustomerHomePage({ user, logout }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-transparent"
+              className="w-full pl-12 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-transparent"
             />
           </div>
         </div>
@@ -324,7 +325,7 @@ export default function CustomerHomePage({ user, logout }) {
       {/* Featured Carousel with Dots - Hidden when searching */}
       {shouldShowCarousel && featuredEvents.length > 0 && (
         <section className="bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="relative group">
               <div className="overflow-hidden rounded-xl">
                 <div 
@@ -337,12 +338,12 @@ export default function CustomerHomePage({ user, logout }) {
                       onClick={() => handleEventClick(event._id)}
                       className="w-full flex-shrink-0 cursor-pointer"
                     >
-                      <div className="relative rounded-xl overflow-hidden aspect-[21/9] bg-gray-900">
+                      <div className="relative rounded-xl overflow-hidden aspect-[24/9] bg-gray-900">
                         <img 
-                        //   src={getEventImage(event)} 
-                        src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
+                          src={event.image} 
+                        // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
                           alt={event.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-fill"
                           onError={(e) => {
                             e.target.src = 'https://via.placeholder.com/1200x500/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
                           }}
@@ -403,8 +404,8 @@ export default function CustomerHomePage({ user, logout }) {
 
       {/* Category Filters */}
       <section className="bg-white border-b border-gray-200 sticky top-16 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-2 py-4 overflow-x-auto scrollbar-hide">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center space-x-2 py-2 overflow-x-auto scrollbar-hide">
             {categories.map((category) => (
               <button
                 key={category}
@@ -425,7 +426,7 @@ export default function CustomerHomePage({ user, logout }) {
       {/* Main Content - Show filtered results or category sections */}
       {activeCategory !== 'All' || searchQuery ? (
         /* Filtered Results */
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
               {searchQuery 
@@ -445,10 +446,10 @@ export default function CustomerHomePage({ user, logout }) {
                 >
                   <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 bg-gray-200">
                     <img 
-                    //   src={getEventImage(event)} 
-                    src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
+                      src={event.image} 
+                    // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
                       alt={event.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         e.target.src = 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
                       }}
@@ -491,7 +492,7 @@ export default function CustomerHomePage({ user, logout }) {
         <div className="pb-16">
           {Object.entries(groupedEvents).map(([category, events]) => (
             <section key={category} className="bg-white border-b border-gray-200">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
@@ -516,10 +517,10 @@ export default function CustomerHomePage({ user, logout }) {
                     >
                       <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 bg-gray-200">
                         <img 
-                        //   src={getEventImage(event)} 
-                        src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
+                          src={event.image} 
+                        // src="https://img.freepik.com/free-vector/flat-design-movie-theater-background_23-2150998489.jpg?semt=ais_hybrid&w=740&q=80"
                           alt={event.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300"
                           onError={(e) => {
                             e.target.src = 'https://via.placeholder.com/400x600/8B5CF6/FFFFFF?text=' + encodeURIComponent(event.name);
                           }}
@@ -563,7 +564,7 @@ export default function CustomerHomePage({ user, logout }) {
           ))}
 
           {Object.keys(groupedEvents).length === 0 && (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+            <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
               <Ticket className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No Events Available</h3>
               <p className="text-gray-600">Check back soon for upcoming events!</p>
