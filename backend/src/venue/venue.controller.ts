@@ -10,27 +10,8 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { VenueService, VenueResponse, VenueStatsResponse } from './venue.service';
-
-interface CreateVenueResponse {
-  success: boolean;
-  venue: VenueResponse;
-}
-
-interface GetVenuesResponse {
-  venues: VenueResponse[];
-  count: number;
-}
-
-interface UpdateVenueResponse {
-  success: boolean;
-  venue: VenueResponse;
-}
-
-interface DeleteVenueResponse {
-  success: boolean;
-  message: string;
-}
+import { VenueService } from './venue.service';
+import { Venue } from './venue.schema';
 
 @Controller('venue')
 export class VenueController {
@@ -40,7 +21,7 @@ export class VenueController {
    * POST /venue
    */
   @Post()
-  async createVenue(@Body() venueData: any): Promise<CreateVenueResponse> {
+  async createVenue(@Body() venueData: any) {
     try {
       const venue = await this.venueService.create(venueData);
       return {
@@ -59,23 +40,16 @@ export class VenueController {
    * GET /venue
    */
   @Get()
-  async getAllVenues(
-    @Query('city') city?: string,
-    @Query('isActive') isActive?: string,
-  ): Promise<GetVenuesResponse> {
+  async getAllVenues(@Query('location') location?: string) {
     try {
       const filters: any = {};
-      
-      if (city) {
-        filters.city = city;
-      }
-      
-      if (isActive !== undefined) {
-        filters.isActive = isActive === 'true';
+
+      if (location) {
+        filters.location = location;
       }
 
       const venues = await this.venueService.findAll(filters);
-      
+
       return {
         venues,
         count: venues.length,
@@ -92,14 +66,17 @@ export class VenueController {
    * GET /venue/search
    */
   @Get('search')
-  async searchVenues(@Query('q') searchTerm: string): Promise<GetVenuesResponse> {
+  async searchVenues(@Query('q') searchTerm: string) {
     try {
       if (!searchTerm) {
-        throw new HttpException('Search term is required', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Search term is required',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const venues = await this.venueService.search(searchTerm);
-      
+
       return {
         venues,
         count: venues.length,
@@ -113,10 +90,10 @@ export class VenueController {
   }
 
   /**
-   * GET /venue/:id
+   * GET /venue/:id - Returns complete venue with zones and seats
    */
   @Get(':id')
-  async getVenueById(@Param('id') venueId: string): Promise<VenueResponse> {
+  async getVenueById(@Param('id') venueId: string): Promise<Venue> {
     try {
       const venue = await this.venueService.findById(venueId);
       return venue;
@@ -132,7 +109,7 @@ export class VenueController {
    * GET /venue/:id/stats
    */
   @Get(':id/stats')
-  async getVenueStats(@Param('id') venueId: string): Promise<VenueStatsResponse> {
+  async getVenueStats(@Param('id') venueId: string) {
     try {
       const stats = await this.venueService.getVenueStats(venueId);
       return stats;
@@ -148,13 +125,10 @@ export class VenueController {
    * PUT /venue/:id
    */
   @Put(':id')
-  async updateVenue(
-    @Param('id') venueId: string,
-    @Body() updateData: any,
-  ): Promise<UpdateVenueResponse> {
+  async updateVenue(@Param('id') venueId: string, @Body() updateData: any) {
     try {
       const venue = await this.venueService.update(venueId, updateData);
-      
+
       return {
         success: true,
         venue,
@@ -171,17 +145,13 @@ export class VenueController {
    * DELETE /venue/:id
    */
   @Delete(':id')
-  async deleteVenue(
-    @Param('id') venueId: string,
-    @Query('hard') hardDelete?: string,
-  ): Promise<DeleteVenueResponse> {
+  async deleteVenue(@Param('id') venueId: string) {
     try {
-      const isHardDelete = hardDelete === 'true';
-      await this.venueService.delete(venueId, isHardDelete);
-      
+      await this.venueService.delete(venueId);
+
       return {
         success: true,
-        message: isHardDelete ? 'Venue deleted' : 'Venue deactivated',
+        message: 'Venue deleted',
       };
     } catch (error) {
       throw new HttpException(

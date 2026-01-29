@@ -1,103 +1,110 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 
+export enum SeatingType {
+  SEATED = 'SEATED',
+  GENERAL_ADMISSION = 'GENERAL_ADMISSION',
+  MIXED = 'MIXED',
+}
+
+export enum EventStatus {
+  DRAFT = 'DRAFT',
+  PUBLISHED = 'PUBLISHED',
+  ON_SALE = 'ON_SALE',
+  SOLD_OUT = 'SOLD_OUT',
+  CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED',
+}
+
+export enum EventCategory {
+  MUSIC = 'MUSIC',
+  SPORTS = 'SPORTS',
+  THEATER = 'THEATER',
+  COMEDY = 'COMEDY',
+  OTHER = 'OTHER',
+}
+
 @Schema({ timestamps: true })
 export class Event {
+  /* ================= CORE INFO ================= */
 
   @Prop({ required: true })
   name: string;
 
   @Prop()
-  description: string;
+  description?: string;
 
   @Prop()
+  image?: string;
+
+  /* ================= SOCIAL / METRICS ================= */
+
+  @Prop({ default: 0 })
   likes: number;
 
-  @Prop()
-  image : string;
-
-  @Prop()
+  @Prop({ default: 0 })
   dislikes: number;
 
-  @Prop({ index: true })
+  /* ================= SCHEDULING ================= */
+
+  @Prop({ required: true, index: true })
   startDateTime: Date;
 
-  @Prop({ index: true })
+  @Prop({ required: true, index: true })
   endDateTime: Date;
 
-  // Reference to the venue
-  @Prop({ type: Types.ObjectId, ref: 'Venue', required: true, index: true })
+  /* ================= VENUE ================= */
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Venue',
+    required: true,
+    index: true,
+  })
   venueId: Types.ObjectId;
 
-  // Seating type for this event
-  @Prop({ enum: ['SEATED', 'GENERAL_ADMISSION', 'MIXED'], default: 'SEATED' })
-  seatingType: string;
+  /* ================= SEATING ================= */
 
-  // Event status
-  @Prop({ 
-    enum: ['DRAFT', 'PUBLISHED', 'ON_SALE', 'SOLD_OUT', 'CANCELLED', 'COMPLETED'],
-    default: 'DRAFT',
-    index: true 
+  @Prop({
+    enum: SeatingType,
+    default: SeatingType.SEATED,
   })
-  status: string;
+  seatingType: SeatingType;
 
-  // Event category
-  @Prop({ 
-    enum: ['MUSIC', 'SPORTS', 'THEATER', 'COMEDY', 'OTHER'],
-    index: true 
-  })
-  category: string;
-
-  // Custom pricing per zone for this event (overrides venue defaults)
+  /**
+   * Custom pricing per zone for this event
+   * Overrides venue base_price
+   * Example: { "z1": 350, "z2": 250 }
+   */
   @Prop({ type: Map, of: Number })
-  zonePricing?: Map<string, number>; // { "Section A": 350, "Section B": 250, "Section D": 150 }
+  zonePricing?: Map<string, number>;
 
-  @Prop()
+  @Prop({ default: 'USD' })
   currency: string;
 
-  // Seat hold/reservation timeout (in minutes)
+  /**
+   * Seat hold duration in minutes
+   * Used by EventSeats.locked_until
+   */
   @Prop({ default: 10 })
   seatHoldTimeout: number;
+
+  /* ================= CLASSIFICATION ================= */
+
+  @Prop({
+    enum: EventCategory,
+    index: true,
+  })
+  category: EventCategory;
+
+  /* ================= LIFECYCLE ================= */
+
+  @Prop({
+    enum: EventStatus,
+    default: EventStatus.DRAFT,
+    index: true,
+  })
+  status: EventStatus;
 }
 
 export const EventSchema = SchemaFactory.createForClass(Event);
-// import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-
-// @Schema()
-// class VenueInfo {
-//   @Prop() name: string;
-//   @Prop() city: string;
-// }
-
-// @Schema({ timestamps: true })
-// export class Event {
-
-//   @Prop({ required: true })
-//   name: string;
-
-//   @Prop()
-//   description: string;
-
-//   @Prop()
-//   likes: number;
-
-//   @Prop()
-//   image : Blob;
-
-//   @Prop()
-//   dislikes: number;
-
-//   @Prop({ index: true })
-//   startDateTime: Date;
-
-//   @Prop({ type: VenueInfo })
-//   venue: VenueInfo;
-
-//   @Prop()
-//   seatingType: string;
-
-//   @Prop({ index: true })
-//   status: string;
-// }
-
-// export const EventSchema = SchemaFactory.createForClass(Event);

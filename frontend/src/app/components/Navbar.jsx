@@ -80,20 +80,21 @@ export default function Navbar() {
     <>
       {/* Top Navigation Bar */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-20 h-12 bg-slate-800 rounded-lg flex items-center justify-center">
+              <div className="w-20 h-12 rounded-lg flex items-center justify-center">
                 <div className="relative w-20 h-12">
                   <Image
-                    src="https://emperorspalace.com/wp-content/uploads/Emperors-Palace-Logo-Gold.svg"
+                    src="/EP_Logo_nobg.png"
+                    // src="https://emperorspalace.com/wp-content/uploads/Emperors-Palace-Logo-Gold.svg"
                     alt="Emperors Palace Logo"
                     fill
                     className="object-contain p-1"
                   />
                 </div>
               </div>
-              <h1 className="text-xl font-semibold text-gray-900">Emperors Palace</h1>
+              <h1 className="text-xl font-semibold text-gray-900">EMPERORS PALACE</h1>
             </div>
             <nav className="hidden md:flex space-x-6">
               {navItems.map((item) => {
