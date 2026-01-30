@@ -166,7 +166,9 @@ export default function VenueMap({
     }
   };
 
-  const isSeatClickable = (seat) => {
+  const isSeatClickable = (seat, isSelected) => {
+    // Allow clicking if seat is selected (for deselection) or available
+    if (isSelected) return true;
     return seat.status === 'AVAILABLE' || (seat.status === 'LOCKED' && seat.holdExpiresAt && new Date(seat.holdExpiresAt) < new Date());
   };
 
@@ -350,7 +352,7 @@ export default function VenueMap({
 
             const isSelected = selectedSeatIds.has(seat._id);
             const seatColor = getSeatColor(seat, isSelected);
-            const clickable = isSeatClickable(seat);
+            const clickable = isSeatClickable(seat, isSelected);
 
             return (
               <g
@@ -400,9 +402,9 @@ export default function VenueMap({
               <div className="flex justify-between">
                 <span className="text-gray-600">Status:</span>
                 <span className={`font-semibold ${hoveredSeat.status === 'AVAILABLE' ? 'text-green-600' :
-                    hoveredSeat.status === 'HELD' ? 'text-yellow-600' :
-                      hoveredSeat.status === 'SOLD' ? 'text-gray-600' :
-                        'text-red-600'
+                  hoveredSeat.status === 'HELD' ? 'text-yellow-600' :
+                    hoveredSeat.status === 'SOLD' ? 'text-gray-600' :
+                      'text-red-600'
                   }`}>
                   {hoveredSeat.status}
                 </span>
