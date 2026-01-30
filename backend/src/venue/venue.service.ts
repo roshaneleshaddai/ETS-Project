@@ -11,7 +11,7 @@ import { Venue, VenueDocument } from './venue.schema';
 export class VenueService {
   constructor(
     @InjectModel(Venue.name) private venueModel: Model<VenueDocument>,
-  ) { }
+  ) {}
 
   /**
    * Create a new venue
@@ -41,11 +41,11 @@ export class VenueService {
   /**
    * Find all venues
    */
-  async findAll(filters?: { location?: string }): Promise<Venue[]> {
+  async findAll(filters?: { city?: string }): Promise<Venue[]> {
     const query: any = {};
 
-    if (filters?.location) {
-      query.location = new RegExp(filters.location, 'i');
+    if (filters?.city) {
+      query.city = new RegExp(filters.city, 'i');
     }
 
     const venues = await this.venueModel.find(query).lean();
@@ -78,14 +78,15 @@ export class VenueService {
   }
 
   /**
-   * Search venues by name or location
+   * Search venues by name, city, or address
    */
   async search(searchTerm: string): Promise<Venue[]> {
     const venues = await this.venueModel
       .find({
         $or: [
           { name: new RegExp(searchTerm, 'i') },
-          { location: new RegExp(searchTerm, 'i') },
+          { city: new RegExp(searchTerm, 'i') },
+          { address: new RegExp(searchTerm, 'i') },
         ],
       })
       .lean();
@@ -101,8 +102,8 @@ export class VenueService {
         venueId: (venue as any)._id?.toString(),
         venueName: venue.name,
         city: venue.city,
-        location: venue.location,
-        totalSeats: venue.totalCapacity || 0,
+        address: venue.address,
+        totalSeats: 0,
         totalSections: 0,
         sectionStats: [],
       };
@@ -110,7 +111,7 @@ export class VenueService {
 
     const sectionStats = venue.sections.map((section) => {
       return {
-        sectionId: section.sectionId,
+        sectionId: section.id,
         name: section.name,
         color: section.color,
         totalSeats: section.seats?.length || 0,
@@ -119,19 +120,17 @@ export class VenueService {
 
     const totalSeats = venue.sections.reduce(
       (sum, section) => sum + (section.seats?.length || 0),
-      0
+      0,
     );
 
     return {
       venueId: (venue as any)._id?.toString(),
       venueName: venue.name,
       city: venue.city,
-      location: venue.location,
+      address: venue.address,
       totalSeats: totalSeats,
       totalSections: venue.sections.length,
       sectionStats,
-      mapDimensions: venue.mapDimensions,
-      stagePosition: venue.stagePosition,
       isActive: venue.isActive,
     };
   }

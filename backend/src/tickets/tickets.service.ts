@@ -8,7 +8,7 @@ export class TicketsService {
   constructor(
     @InjectModel(Ticket.name)
     private ticketModel: Model<TicketDocument>,
-  ) { }
+  ) {}
 
   async create(ticket: Ticket): Promise<Ticket> {
     try {
@@ -102,8 +102,8 @@ export class TicketsService {
     try {
       const updateData: any = { status };
 
-      // If status is SCANNED, also update scannedAt timestamp
-      if (status === TicketStatus.SCANNED) {
+      // If status is USED, also update scannedAt timestamp
+      if (status === TicketStatus.USED) {
         updateData.scannedAt = new Date();
       }
 

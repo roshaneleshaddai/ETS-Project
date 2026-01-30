@@ -11,7 +11,7 @@ import {
   HttpStatus,
   HttpException,
 } from '@nestjs/common';
-import { SeatsService } from './seats.service';
+import { SeatsService } from './event-seats.service';
 import { VenueService } from '../venue/venue.service';
 import { EventsService } from '../events/events.service';
 
@@ -21,7 +21,7 @@ export class SeatsController {
     private seatsService: SeatsService,
     private venueService: VenueService,
     private eventsService: EventsService,
-  ) { }
+  ) {}
 
   /**
    * GET /seats/event/:eventId
@@ -31,7 +31,8 @@ export class SeatsController {
   async getEventSeats(@Param('eventId') eventId: string) {
     try {
       const seats = await this.seatsService.getEventSeats(eventId);
-      const availability = await this.seatsService.getAvailableSeatsByZone(eventId);
+      const availability =
+        await this.seatsService.getAvailableSeatsByZone(eventId);
 
       return {
         seats,
@@ -51,6 +52,7 @@ export class SeatsController {
    * GET /seats/event/:eventId/zone/:zoneId
    * Get seats for a specific zone
    */
+
   @Get('event/:eventId/zone/:zoneId')
   async getZoneSeats(
     @Param('eventId') eventId: string,
@@ -58,9 +60,9 @@ export class SeatsController {
   ) {
     try {
       const seats = await this.seatsService.getSeatsByZone(eventId, zoneId);
-      const available = seats.filter(s => s.status === 'AVAILABLE').length;
-      const held = seats.filter(s => s.status === 'HELD').length;
-      const sold = seats.filter(s => s.status === 'SOLD').length;
+      const available = seats.filter((s) => s.status === 'AVAILABLE').length;
+      const held = seats.filter((s) => s.status === 'HELD').length;
+      const sold = seats.filter((s) => s.status === 'SOLD').length;
 
       return {
         seats,
@@ -133,11 +135,12 @@ export class SeatsController {
    * Atomic lock for a single seat as per new requirements
    */
   @Post('lock-seat')
-  async lockSeat(
-    @Body() body: { eventSeatId: string; userId: string },
-  ) {
+  async lockSeat(@Body() body: { eventSeatId: string; userId: string }) {
     try {
-      const result = await this.seatsService.lockSeat(body.eventSeatId, body.userId);
+      const result = await this.seatsService.lockSeat(
+        body.eventSeatId,
+        body.userId,
+      );
       return result;
     } catch (error) {
       throw new HttpException(
@@ -152,11 +155,12 @@ export class SeatsController {
    * Release a locked seat (for deselection)
    */
   @Post('unlock-seat')
-  async unlockSeat(
-    @Body() body: { eventSeatId: string; userId: string },
-  ) {
+  async unlockSeat(@Body() body: { eventSeatId: string; userId: string }) {
     try {
-      const result = await this.seatsService.unlockSeat(body.eventSeatId, body.userId);
+      const result = await this.seatsService.unlockSeat(
+        body.eventSeatId,
+        body.userId,
+      );
       return result;
     } catch (error) {
       throw new HttpException(
@@ -171,9 +175,7 @@ export class SeatsController {
    * Manually release held seats (user cancels)
    */
   @Post('release')
-  async releaseSeats(
-    @Body() body: { eventId: string; seatIds: string[] },
-  ) {
+  async releaseSeats(@Body() body: { eventId: string; seatIds: string[] }) {
     try {
       await this.seatsService.releaseHeldSeats(body.seatIds, body.eventId);
 
@@ -250,7 +252,10 @@ export class SeatsController {
     @Query('eventId') eventId?: string,
   ) {
     try {
-      const heldSeats = await this.seatsService.getCustomerHeldSeats(customerId, eventId);
+      const heldSeats = await this.seatsService.getCustomerHeldSeats(
+        customerId,
+        eventId,
+      );
 
       return {
         heldSeats,
@@ -269,11 +274,12 @@ export class SeatsController {
    * Initialize seats for an event (Admin only)
    */
   @Post('initialize')
-  async initializeSeats(
-    @Body() body: { eventId: string; venueId: string },
-  ) {
+  async initializeSeats(@Body() body: { eventId: string; venueId: string }) {
     try {
-      await this.seatsService.initializeSeatsForEvent(body.eventId, body.venueId);
+      await this.seatsService.initializeSeatsForEvent(
+        body.eventId,
+        body.venueId,
+      );
 
       return {
         success: true,
@@ -292,9 +298,7 @@ export class SeatsController {
    * Block seats (Admin only)
    */
   @Put('block')
-  async blockSeats(
-    @Body() body: { eventId: string; seatIds: string[] },
-  ) {
+  async blockSeats(@Body() body: { eventId: string; seatIds: string[] }) {
     try {
       await this.seatsService.blockSeats(body.seatIds, body.eventId);
 
@@ -315,9 +319,7 @@ export class SeatsController {
    * Unblock seats (Admin only)
    */
   @Put('unblock')
-  async unblockSeats(
-    @Body() body: { eventId: string; seatIds: string[] },
-  ) {
+  async unblockSeats(@Body() body: { eventId: string; seatIds: string[] }) {
     try {
       await this.seatsService.unblockSeats(body.seatIds, body.eventId);
 

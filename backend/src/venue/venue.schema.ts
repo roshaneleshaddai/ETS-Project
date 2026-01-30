@@ -3,69 +3,41 @@ import { Document } from 'mongoose';
 
 export type VenueDocument = Venue & Document;
 
+export enum VenueSeatType {
+  STANDARD = 'STANDARD',
+  ACCESSIBLE = 'ACCESSIBLE',
+  AISLE = 'AISLE',
+}
+
 @Schema({ _id: false })
 export class VenueSeat {
-  @Prop({ required: true })
-  row: string;
+  @Prop({ required: true }) row: string;
+  @Prop({ required: true }) number: number;
+  @Prop({ required: true }) x: number;
+  @Prop({ required: true }) y: number;
 
-  @Prop({ required: true })
-  seatNumber: number;
-
-  @Prop({ type: Object })
-  position: { x: number; y: number };
-
-  @Prop()
-  isAccessible: boolean;
-
-  @Prop()
-  isAisle: boolean;
+  @Prop({ type: String, enum: VenueSeatType, default: VenueSeatType.STANDARD })
+  type: VenueSeatType;
 }
-export const VenueSeatSchema = SchemaFactory.createForClass(VenueSeat);
 
 @Schema({ _id: false })
 export class Section {
-  @Prop({ required: true })
-  sectionId: string;
-
-  @Prop({ required: true })
-  name: string;
-
-  @Prop()
-  color: string;
-
-  @Prop([Object])
-  boundary: { x: number; y: number }[];
-
-  @Prop([VenueSeatSchema])
-  seats: VenueSeat[];
+  @Prop({ required: true }) id: string; // e.g., "BALCONY-1"
+  @Prop({ required: true }) name: string;
+  @Prop() color: string;
+  @Prop([VenueSeat]) seats: VenueSeat[];
 }
-export const SectionSchema = SchemaFactory.createForClass(Section);
 
 @Schema({ timestamps: true })
 export class Venue {
-  @Prop({ required: true })
-  name: string;
+  @Prop({ required: true }) name: string;
+  @Prop({ required: true, index: true }) city: string;
+  @Prop() address: string;
 
-  @Prop()
-  city: string;
-
-  @Prop()
-  location: string;
-
-  @Prop({ type: [SectionSchema], default: [] })
+  @Prop({ type: [Section], default: [] })
   sections: Section[];
 
-  @Prop({ type: Object })
-  mapDimensions: { width: number; height: number };
-
-  @Prop({ type: Object })
-  stagePosition: { x: number; y: number };
-
-  @Prop({ default: true })
-  isActive: boolean;
-
-  @Prop()
-  totalCapacity: number;
+  @Prop({ default: true }) isActive: boolean;
 }
 
 export const VenueSchema = SchemaFactory.createForClass(Venue);

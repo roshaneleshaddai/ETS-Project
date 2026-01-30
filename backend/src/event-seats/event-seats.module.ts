@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { SeatsController } from './seats.controller';
-import { SeatsService } from './seats.service';
-import { SeatSchema } from './seats.schema';
+import { SeatsController } from './event-seats.controller';
+import { SeatsService } from './event-seats.service';
+import { SeatSchema } from './event-seats.schema';
 import { EventSchema } from '../events/events.schema';
 import { VenueSchema } from '../venue/venue.schema';
 import { ZoneSchema } from '../zones/zones.schema';
@@ -16,7 +16,10 @@ import { VenueModule } from '../venue/venue.module';
       { name: 'Event', schema: EventSchema },
       { name: 'Venue', schema: VenueSchema },
       { name: 'Zone', schema: ZoneSchema },
-      { name: 'Ticket', schema: require('../tickets/tickets.schema').TicketSchema },
+      {
+        name: 'Ticket',
+        schema: require('../tickets/tickets.schema').TicketSchema,
+      },
     ]),
     EventsModule, // For EventGateway
     VenueModule,
@@ -25,4 +28,4 @@ import { VenueModule } from '../venue/venue.module';
   providers: [SeatsService],
   exports: [SeatsService],
 })
-export class SeatsModule { }
+export class SeatsModule {}
