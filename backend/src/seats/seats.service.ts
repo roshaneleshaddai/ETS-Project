@@ -617,6 +617,49 @@ export class SeatsService {
     };
   }
 
+  /**
+   * Unlock a seat (release Redis lock)
+   */
+  async unlockSeat(eventSeatId: string, userId: string): Promise<{ success: boolean }> {
+    let eventId: string;
+    let seatUid: string;
+
+    // Parse virtual or MongoDB ID
+    const v = this.parseVirtualId(eventSeatId);
+    if (v) {
+      eventId = v.eventId;
+      seatUid = `${v.sectionId}:${v.row}:${v.seatNumber}`;
+    } else {
+      const seat = await this.seatModel.findById(eventSeatId).lean();
+      if (!seat) throw new BadRequestException('Seat not found');
+      eventId = seat.eventId.toString();
+      seatUid = `${seat.sectionId}:${seat.row}:${seat.seatNumber}`;
+    }
+
+    const redisKey = `lock:event:${eventId}:seat:${seatUid}`;
+
+    // Only delete the lock if it belongs to this user
+    const luaScript = `
+      local currentLock = redis.call("GET", KEYS[1])
+      if currentLock == ARGV[1] then
+        redis.call("DEL", KEYS[1])
+        return 1
+      end
+      return 0
+    `;
+
+    const result = await this.redis.eval(luaScript, 1, redisKey, userId);
+
+    if (result === 1) {
+      // Broadcast that seat is now available
+      this.eventGateway.broadcastSeatStatusChange(eventId, eventSeatId, SeatStatus.AVAILABLE);
+      return { success: true };
+    }
+
+    // Lock didn't belong to user or didn't exist
+    return { success: false };
+  }
+
   private parseVirtualId(eventSeatId: string) {
     if (!eventSeatId || !eventSeatId.includes(':')) return null;
     const parts = eventSeatId.split(':');

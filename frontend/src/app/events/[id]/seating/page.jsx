@@ -101,8 +101,8 @@ export default function EventSeatingPage() {
         currentSeats.map((s) => (s._id === seatId ? { ...s, status } : s))
       );
 
-      // If a seat we had selected was locked by someone else or sold, remove it
-      if (status !== "AVAILABLE" && status !== "LOCKED") {
+      // If a seat becomes AVAILABLE, SOLD, or BLOCKED, remove it from our selection
+      if (status === "AVAILABLE" || status === "SOLD" || status === "BLOCKED") {
         setSelectedSeats(prev => {
           if (prev.has(seatId)) {
             const next = new Set(prev);
@@ -123,14 +123,46 @@ export default function EventSeatingPage() {
   }, [eventId]);
 
   const handleSeatClick = async (seat) => {
-    // If already selected, we just toggle it locally for now (unlocking is complex)
-    // In a production app, we'd have a DELETE /lock-seat too.
+    // If already selected, unlock it
     if (selectedSeats.has(seat._id)) {
-      setSelectedSeats((prev) => {
-        const next = new Set(prev);
-        next.delete(seat._id);
-        return next;
-      });
+      if (!customerId) return;
+
+      try {
+        setIsLocking(true);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/unlock-seat`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              eventSeatId: seat._id,
+              userId: customerId,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to unlock seat");
+        }
+
+        // Remove from selected seats and update status optimistically
+        setSelectedSeats((prev) => {
+          const next = new Set(prev);
+          next.delete(seat._id);
+          return next;
+        });
+
+        // Update seat status optimistically
+        setSeats((currentSeats) =>
+          currentSeats.map((s) => (s._id === seat._id ? { ...s, status: "AVAILABLE" } : s))
+        );
+      } catch (err) {
+        console.error("Unlock error:", err);
+        alert(err.message);
+      } finally {
+        setIsLocking(false);
+      }
       return;
     }
 

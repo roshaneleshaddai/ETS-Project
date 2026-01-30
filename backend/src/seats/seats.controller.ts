@@ -148,6 +148,25 @@ export class SeatsController {
   }
 
   /**
+   * POST /seats/unlock-seat
+   * Release a locked seat (for deselection)
+   */
+  @Post('unlock-seat')
+  async unlockSeat(
+    @Body() body: { eventSeatId: string; userId: string },
+  ) {
+    try {
+      const result = await this.seatsService.unlockSeat(body.eventSeatId, body.userId);
+      return result;
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to unlock seat',
+        error.status || HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  /**
    * POST /seats/release
    * Manually release held seats (user cancels)
    */
