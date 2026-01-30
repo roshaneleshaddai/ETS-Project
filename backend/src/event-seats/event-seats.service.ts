@@ -107,7 +107,7 @@ export class SeatsService {
         const zoneKey = `z${sectionIndex + 1}`;
         const price = event.zonePricing?.[zoneKey] || 0;
 
-        const price = event.zonePricing?.[zoneKey] || 0;
+        // const price = event.zonePricing?.[zoneKey] || 0;
 
         if (!section.seats || !Array.isArray(section.seats)) {
           console.log(`  ⚠️ Section ${secId} has no seats array`);
@@ -122,7 +122,7 @@ export class SeatsService {
         );
         const locks = await this.redis.mget(...redisKeys);
 
-        const locks = await this.redis.mget(...redisKeys);
+        // const locks = await this.redis.mget(...redisKeys);
 
         section.seats.forEach((seatConfig: any, index: number) => {
           const uid = seatUids[index];

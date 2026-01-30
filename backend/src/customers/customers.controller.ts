@@ -6,13 +6,14 @@ import {
   Param,
   Post,
   Put,
+  NotFoundException,
 } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { Customer } from './customers.schema';
 
 @Controller('customers')
 export class CustomersController {
-  constructor(private readonly customersService: CustomersService) {}
+  constructor(private readonly customersService: CustomersService) { }
 
   @Post()
   async create(@Body() customer: Customer): Promise<Customer> {
@@ -30,15 +31,23 @@ export class CustomersController {
   }
 
   @Get('email/:email')
-  async findByEmail(@Param('email') email: string): Promise<Customer | null> {
-    return this.customersService.findByEmail(email);
+  async findByEmail(@Param('email') email: string): Promise<Customer> {
+    const customer = await this.customersService.findByEmail(email);
+    if (!customer) {
+      throw new NotFoundException(`Customer with email ${email} not found`);
+    }
+    return customer;
   }
 
   @Get('user/:userId')
   async findByUserId(
     @Param('userId') userId: string,
-  ): Promise<Customer | null> {
-    return this.customersService.findByUserId(userId);
+  ): Promise<Customer> {
+    const customer = await this.customersService.findByUserId(userId);
+    if (!customer) {
+      throw new NotFoundException(`Customer with User ID ${userId} not found`);
+    }
+    return customer;
   }
 
   @Get('loyalty/:loyaltyId')

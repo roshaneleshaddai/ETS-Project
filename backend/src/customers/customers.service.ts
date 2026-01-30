@@ -57,7 +57,7 @@ export class CustomersService {
 
   async findByUserId(userId: string): Promise<Customer | null> {
     try {
-      return await this.customerModel.findOne({ userId: userId as any }).exec();
+      return await this.customerModel.findOne({ userId: new Types.ObjectId(userId) }).exec();
     } catch (error) {
       console.error('Error in findByUserId:', error);
       throw error;
