@@ -1,6 +1,7 @@
-'use client';
+"use client";
+
 import { useState, useEffect } from "react";
-import { Heart, Calendar, MapPin, Ticket, HeartOff, ArrowLeft } from "lucide-react";
+import { Heart, Calendar, MapPin, Ticket, HeartOff, ArrowLeft, ChevronRight, Sparkles } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import RoleGuard from "@/app/components/RoleGuard";
 import { useAuth } from "@/context/AuthContext";
@@ -38,7 +39,7 @@ export default function FavoritesPage() {
 
       // Fetch customer data using user ID
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/user/${user._id}`);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           console.log('No customer record found for this user');
@@ -47,16 +48,16 @@ export default function FavoritesPage() {
         }
         throw new Error('Failed to fetch customer data');
       }
-      
+
       const customerData = await response.json();
-      
+
       // Store the customer ID
       setCustomerId(customerData._id);
-      
+
       // Get array of liked event IDs
       const eventIds = customerData.likedEvents || [];
       setLikedEventIds(eventIds);
-      
+
     } catch (err) {
       console.error('Error fetching customer data:', err);
       setError(err.message);
@@ -67,7 +68,7 @@ export default function FavoritesPage() {
   const fetchLikedEvents = async () => {
     try {
       setIsLoading(true);
-      
+
       // Fetch events in batch using the new endpoint
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/events/batch`, {
         method: 'POST',
@@ -83,7 +84,7 @@ export default function FavoritesPage() {
 
       const events = await response.json();
       setLikedEvents(events);
-      
+
     } catch (err) {
       console.error('Error fetching liked events:', err);
       setError(err.message);
@@ -146,23 +147,19 @@ export default function FavoritesPage() {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white">
-        <Navbar />
-        <div className="flex items-center justify-center pt-32">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-slate-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your favorites...</p>
-          </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading your favorites...</p>
         </div>
       </div>
     );
@@ -170,19 +167,18 @@ export default function FavoritesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white">
-        <Navbar />
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <p className="text-red-800 font-semibold mb-2">Error Loading Favorites</p>
-            <p className="text-red-600 text-sm">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Retry
-            </button>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6">
+            <p className="font-bold mb-1">Error Loading Favorites</p>
+            <p className="text-sm">{error}</p>
           </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -190,32 +186,32 @@ export default function FavoritesPage() {
 
   return (
     <RoleGuard allowedRoles={["CUSTOMER"]}>
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-slate-50 pb-20">
         <Navbar />
-        
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-20 md:pb-8">
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Header Section */}
-          <div className="mb-8">
-            <div className="flex items-center gap-4 mb-4">
+          <div className="mb-6">
+            <div className="flex items-center gap-4 mb-6">
               <button
                 onClick={() => router.back()}
-                className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors"
+                className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm hover:shadow-md"
               >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="font-medium hidden sm:inline">Back</span>
+                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                <span>Back</span>
               </button>
             </div>
-            
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Heart className="w-6 h-6 text-red-600 fill-red-600" />
+
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center shadow-inner">
+                <Heart className="w-7 h-7 text-red-600 fill-red-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">My Favorite Events</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  {likedEvents.length === 0 
-                    ? "You haven't liked any events yet" 
-                    : `${likedEvents.length} favorite event${likedEvents.length !== 1 ? 's' : ''} saved`
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">My Favorites</h1>
+                <p className="text-slate-500 font-medium mt-1">
+                  {likedEvents.length === 0
+                    ? "You haven't liked any events yet"
+                    : `You have saved ${likedEvents.length} event${likedEvents.length !== 1 ? 's' : ''}`
                   }
                 </p>
               </div>
@@ -224,89 +220,97 @@ export default function FavoritesPage() {
 
           {likedEvents.length === 0 ? (
             /* Empty State */
-            <div className="bg-white border border-gray-200 rounded-lg p-12 text-center shadow-sm">
-              <div className="max-w-md mx-auto">
-                <div className="bg-gray-50 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6 border border-gray-200">
-                  <HeartOff className="w-12 h-12 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No Favorite Events Yet
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Start exploring events and tap the heart icon to save your favorites here
-                </p>
-                <button
-                  onClick={() => router.push('/')}
-                  className="px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors font-medium shadow-sm"
-                >
-                  Discover Events
-                </button>
+            <div className="w-full py-4 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <HeartOff className="w-10 h-10 text-slate-300" />
               </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">No Favorites Yet</h3>
+              <p className="text-slate-500 max-w-sm mx-auto mb-8">
+                Start exploring events and tap the heart icon to save your favorites here.
+              </p>
+              <button
+                onClick={() => router.push('/')}
+                className="px-8 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 font-bold"
+              >
+                Discover Events
+              </button>
             </div>
           ) : (
-            /* Events Grid - Simple style like customer page */
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+            /* Events Grid */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {likedEvents.map((event) => (
                 <div
                   key={event._id}
                   onClick={() => handleEventClick(event._id)}
-                  className="group cursor-pointer"
+                  className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full"
                 >
-                  <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 bg-gray-200">
-                    <img 
-                      src={event.image}
+                  {/* Image Container */}
+                  <div className="relative aspect-[3/2] overflow-hidden bg-slate-200">
+                    <img
+                      src={event.image || `https://source.unsplash.com/800x600/?${encodeURIComponent(event.type)},event`}
                       alt={event.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/400x600/f3f4f6/1f2937?text=' + encodeURIComponent(event.name);
+                        e.target.src = 'https://via.placeholder.com/400x300/e2e8f0/94a3b8?text=' + encodeURIComponent(event.name);
                       }}
                     />
-                    
-                    {/* Unlike Button */}
-                    <div className="absolute top-2 right-2">
-                      <button 
+
+                    {/* Overlay Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+
+                    {/* Top Badges */}
+                    <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
+                      <span className="px-2.5 py-1 bg-white/90 backdrop-blur-md rounded-lg text-xs font-bold text-slate-800 shadow-sm">
+                        {event.type}
+                      </span>
+
+                      <button
                         onClick={(e) => handleUnlike(event._id, e)}
                         disabled={unlikingInProgress.has(event._id)}
-                        className={`bg-white/90 hover:bg-white rounded-full p-2 shadow-md transition-all z-10 ${
-                          unlikingInProgress.has(event._id) ? 'opacity-50 cursor-wait' : ''
-                        }`}
+                        className={`p-2 rounded-full backdrop-blur-md transition-all shadow-sm bg-red-500 text-white hover:bg-red-600 ${unlikingInProgress.has(event._id) ? 'opacity-70 cursor-wait' : 'hover:scale-110 active:scale-95'
+                          }`}
                         title="Remove from favorites"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onMouseUp={(e) => e.stopPropagation()}
                       >
-                        <Heart 
-                          className="w-4 h-4 fill-red-500 text-red-500"
-                        />
+                        <Heart className={`w-4 h-4 fill-current`} />
                       </button>
-                    </div>
-
-                    {/* Likes Count Badge */}
-                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-3 h-3 fill-red-500 text-red-500" />
-                        <span className="text-white text-xs font-semibold">
-                          {formatLikes(event.likes || 0)}
-                        </span>
-                      </div>
                     </div>
 
                     {/* Status Badge */}
                     {event.status === 'ACTIVE' && (
-                      <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-md font-medium">
+                      <div className="absolute bottom-3 left-3 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
                         Available
                       </div>
                     )}
                   </div>
-                  
-                  {/* Simple Event Info - Like customer page */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-md line-clamp-2 mb-1">
+
+                  {/* Content */}
+                  <div className="p-5 flex flex-col flex-grow">
+                    <h3 className="font-bold text-slate-900 text-lg mb-2 line-clamp-1 group-hover:text-slate-700 transition-colors">
                       {event.name}
                     </h3>
-                    <p className="text-sm text-gray-800">{event.type}</p>
-                    <div className="flex items-center text-sm text-gray-800">
-                          <Calendar className="w-3 h-3 mr-1" />
-                      <span>{formatDate(event.startDateTime)}</span>
+
+                    <div className="space-y-2 mb-4 flex-grow">
+                      <div className="flex items-center text-sm text-slate-500 font-medium">
+                        <Calendar className="w-4 h-4 mr-2 text-slate-500" />
+                        <span>{formatDate(event.startDateTime)}</span>
+                      </div>
+                      {event.venue && (
+                        <div className="flex items-center text-sm text-slate-500">
+                          <MapPin className="w-4 h-4 mr-2 text-slate-500" />
+                          <span className="line-clamp-1">{event.venue.name}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
+                      <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold">
+                        <Heart className="w-3.5 h-3.5 text-red-400 fill-red-400" />
+                        <span>{formatLikes(event.likes || 0)}</span>
+                      </div>
+                      <span className="text-red-700 text-sm font-bold flex items-center group-hover:translate-x-1 transition-transform">
+                        Details <ChevronRight className="w-4 h-4 ml-0.5" />
+                      </span>
                     </div>
                   </div>
                 </div>

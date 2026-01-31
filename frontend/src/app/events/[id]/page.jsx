@@ -3,24 +3,22 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
-import VenueMap from "@/app/components/VenueMap";
 import { formatLikes } from "../../utils/formatLikes";
 import { useAuth } from "@/context/AuthContext";
-import { io } from 'socket.io-client';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Share2, 
+import {
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Clock,
+  Share2,
   Heart,
-  Users,
   Info,
   Ticket,
-  ShoppingCart,
-  Star,
-  TrendingUp,
-  Sparkles
+  Sparkles,
+  Music,
+  ExternalLink,
+  Navigation,
+  Mic2
 } from 'lucide-react';
 
 export default function EventDetailsPage() {
@@ -28,14 +26,11 @@ export default function EventDetailsPage() {
   const router = useRouter();
   const [event, setEvent] = useState(null);
   const [venue, setVenue] = useState(null);
-  const [seats, setSeats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedSeats, setSelectedSeats] = useState(new Set());
   const [isLiked, setIsLiked] = useState(false);
   const [likingInProgress, setLikingInProgress] = useState(false);
   const [customerId, setCustomerId] = useState(null);
-  const [socket, setSocket] = useState(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -44,28 +39,6 @@ export default function EventDetailsPage() {
       if (user) {
         fetchCustomerData(params.id);
       }
-      
-      const socketInstance = io(process.env.NEXT_PUBLIC_BACKEND_URI || 'http://localhost:4000');
-      setSocket(socketInstance);
-      
-      socketInstance.emit('join-event', params.id);
-      
-      socketInstance.on('seatStatusChanged', ({ seatId, status }) => {
-        setSeats(prevSeats => 
-          prevSeats.map(seat => 
-            seat._id === seatId ? { ...seat, status } : seat
-          )
-        );
-      });
-
-      socketInstance.on('joined-event', (data) => {
-        console.log('Joined event room:', data);
-      });
-
-      return () => {
-        socketInstance.emit('leave-event', params.id);
-        socketInstance.disconnect();
-      };
     }
   }, [params?.id, user]);
 
@@ -73,12 +46,12 @@ export default function EventDetailsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const eventRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/events/${eventId}`);
       if (!eventRes.ok) throw new Error('Failed to fetch event details');
       const eventData = await eventRes.json();
       setEvent(eventData);
-      
+
       if (eventData.venueId) {
         const venueRes = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URI}/venue/${eventData.venueId}`
@@ -89,13 +62,6 @@ export default function EventDetailsPage() {
           setVenue(venueData);
         }
       }
-      
-      const seatsRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/event/${eventId}`);
-      if (seatsRes.ok) {
-        const seatsData = await seatsRes.json();
-        setSeats(seatsData.seats || []);
-      }
-      
     } catch (err) {
       console.error('Error fetching event details:', err);
       setError(err.message);
@@ -107,21 +73,17 @@ export default function EventDetailsPage() {
   const fetchCustomerData = async (eventId) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/user/${user._id}`);
-      
+
       if (!response.ok) {
-        if (response.status === 404) {
-          console.log('No customer record found for this user');
-          return;
-        }
+        if (response.status === 404) return;
         throw new Error('Failed to fetch customer data');
       }
-      
+
       const customerData = await response.json();
       setCustomerId(customerData._id);
-      
+
       const liked = customerData.likedEvents?.some(id => id.toString() === eventId);
       setIsLiked(liked);
-      
     } catch (err) {
       console.error('Error fetching customer data:', err);
     }
@@ -129,167 +91,78 @@ export default function EventDetailsPage() {
 
   const handleLikeToggle = async () => {
     if (!user) {
-      alert('Please login to like events');
       router.push('/auth/login');
       return;
     }
 
-    if (!customerId) {
-      alert('Unable to process like. Please refresh the page and try again.');
-      return;
-    }
-
-    if (likingInProgress) return;
+    if (!customerId || likingInProgress) return;
 
     try {
       setLikingInProgress(true);
-      
       const endpoint = `${process.env.NEXT_PUBLIC_BACKEND_URI}/customers/${customerId}/like-event`;
       const method = isLiked ? 'DELETE' : 'POST';
-      
+
       const response = await fetch(endpoint, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId: event._id })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update like status');
-      }
+      if (!response.ok) throw new Error('Failed to update like status');
 
       setIsLiked(!isLiked);
-      setEvent(prevEvent => ({
-        ...prevEvent,
-        likes: (prevEvent.likes || 0) + (isLiked ? -1 : 1)
+      setEvent(prev => ({
+        ...prev,
+        likes: (prev.likes || 0) + (isLiked ? -1 : 1)
       }));
 
     } catch (err) {
       console.error('Error toggling like:', err);
-      alert(err.message || 'Failed to update like status');
     } finally {
       setLikingInProgress(false);
     }
   };
 
-  const handleSeatClick = (seat) => {
-    setSelectedSeats(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(seat._id)) {
-        newSet.delete(seat._id);
-      } else {
-        if (newSet.size >= 10) {
-          alert('Maximum 10 seats can be selected at once');
-          return prev;
-        }
-        newSet.add(seat._id);
-      }
-      return newSet;
-    });
-  };
-
-  const handleCheckout = async () => {
-    if (selectedSeats.size === 0) {
-      alert('Please select at least one seat');
-      return;
-    }
-
-    if (!user || !customerId) {
-      alert('Please login to book tickets');
-      router.push('/auth/login');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/hold`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId: event._id,
-          seatIds: Array.from(selectedSeats),
-          customerId: customerId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Some seats are no longer available');
-      }
-
-      const { holdToken, expiresAt } = await response.json();
-      
-      sessionStorage.setItem('holdToken', holdToken);
-      sessionStorage.setItem('holdExpiry', expiresAt);
-      sessionStorage.setItem('selectedSeats', JSON.stringify(Array.from(selectedSeats)));
-      
-      router.push(`/checkout?eventId=${event._id}&holdToken=${holdToken}`);
-      
-    } catch (error) {
-      console.error('Error holding seats:', error);
-      alert(error.message || 'Failed to reserve seats. Please try again.');
-      fetchEventDetails(params.id);
-    }
-  };
-
-  const calculateTotal = () => {
-    let total = 0;
-    selectedSeats.forEach(seatId => {
-      const seat = seats.find(s => s._id === seatId);
-      if (seat && event.zones) {
-        const zone = event.zones.find(z => z._id === seat.zoneId);
-        if (zone) {
-          total += zone.price;
-        }
-      }
-    });
-    return total;
-  };
-
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
     });
   };
 
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit', hour12: true
     });
   };
 
-  const handleSectionClick = () => {
-    router.push(`/events/${event._id}/seating`);
+  const getMapUrl = (venueData) => {
+    if (!venueData) return '';
+    // Use googleMapLink if available for direct linking, but for embed we need a query
+    // If coordinates are available, use them [Not utilizing coordinates for embed yet simplify]
+    const query = encodeURIComponent(`${venueData.name}, ${venueData.address || venueData.location || venueData.city || ''}`);
+    return `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  };
+
+  const getDirectMapLink = (venueData) => {
+    if (venueData?.googleMapLink) return venueData.googleMapLink;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((venueData?.name || '') + ' ' + (venueData?.location || ''))}`;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-4">
-            <p className="font-semibold">Event Not Found</p>
-            <p className="text-sm mt-1">{error || 'This event could not be loaded'}</p>
-          </div>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900"
-          >
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Event Not Found</h2>
+          <p className="text-slate-600 mb-6">{error || 'This event could not be loaded'}</p>
+          <button onClick={() => router.push('/')} className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
             Back to Home
           </button>
         </div>
@@ -297,245 +170,243 @@ export default function EventDetailsPage() {
     );
   }
 
-  const zonePricing = new Map();
-  if (event.zones) {
-    event.zones.forEach(zone => {
-      zonePricing.set(zone._id, zone.price);
-    });
-  }
-
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      {/* Main Content */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-          {/* Back Button & Actions */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium hidden sm:inline">Back</span>
-            </button>
-          </div>
+      {/* Hero Section */}
+      <div className="relative h-[60vh] min-h-[500px] w-full overflow-hidden bg-slate-900">
+        <div className="absolute inset-0">
+          <img
+            src={event.images?.landscape || event.image}
+            alt={event.name}
+            className="w-full h-full object-cover opacity-60 blur-xxs scale-105"
+            onError={(e) => {
+              e.target.src = 'https://via.placeholder.com/1920x1080/1f2937/4b5563?text=Event+Image';
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+        </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Event Poster */}
-            <div className="lg:col-span-4">
-              <div className="sticky top-20">
-                <div className="rounded-lg overflow-hidden shadow-md">
-                  <div className="relative aspect-[4/5] bg-gray-100">
-                    <img 
-                      src={event.image} 
-                      alt={event.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/600x900/f3f4f6/1f2937?text=' + encodeURIComponent(event.name);
-                      }}
-                    /> 
-                  {/* 🔥 Likes + Favorite Overlay (Top Left) */}
-                  <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                    <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                    <span className="text-white text-sm font-semibold">
-                      {formatLikes(event.likes || 0)}
-                    </span>
-                  </div>
+        {/* Likes Overlay on Image */}
+        {/* <div className="absolute top-24 right-4 sm:right-8 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+          <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+          <span className="text-white font-bold">{formatLikes(event.likes || 0)}</span>
+        </div> */}
 
-                  {/* ❤️ Like / Unlike Button on Image */}
-                  {user && customerId && (
-                    <div className="absolute top-3 right-3 flex flex-col gap-2">
-                      
-                      {/* Like Button */}
-                      <button
-                        onClick={handleLikeToggle}
-                        disabled={likingInProgress}
-                        className={`p-2 rounded-full bg-white/90 hover:bg-white shadow transition
-                          ${likingInProgress ? 'opacity-50 cursor-wait' : ''}`}
-                      >
-                        <Heart
-                          className={`w-5 h-5 transition ${
-                            isLiked
-                              ? 'fill-red-500 text-red-500 scale-110'
-                              : 'text-gray-700'
-                          }`}
-                        />
-                      </button>
+        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-16">
+          <button
+            onClick={() => router.back()}
+            className="absolute top-8 left-4 sm:left-8 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white text-sm font-medium transition flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
 
-                      {/* Share Button */}
-                      <button
-                        onClick={() => {
-                          if (navigator.share) {
-                            navigator.share({
-                              title: event.name,
-                              text: event.description || 'Check out this event!',
-                              url: window.location.href,
-                            });
-                          } else {
-                            navigator.clipboard.writeText(window.location.href);
-                            alert('Event link copied to clipboard!');
-                          }
-                        }}
-                        className="p-2 rounded-full bg-white/90 hover:bg-white shadow transition"
-                      >
-                        <Share2 className="w-5 h-5 text-gray-700" />
-                      </button>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div className="space-y-4 max-w-3xl">
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-indigo-500/20 text-indigo-200 border border-indigo-500/30 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur-sm">
+                  {event.type || event.category || 'Event'}
+                </span>
+                {event.status === 'ACTIVE' && (
+                  <span className="flex items-center gap-1.5 text-green-400 text-xs font-semibold px-2 py-0.5 bg-green-900/30 border border-green-500/30 rounded-full">
+                    <Sparkles className="w-3 h-3" /> Booking Open
+                  </span>
+                )}
+                {/* <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                <span className="text-white font-bold">{formatLikes(event.likes || 0)}</span>
+                 */}
+                <div className="absolute top-8 sm:right-8 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                  <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                  <span className="text-white font-bold">{formatLikes(event.likes || 0)}</span>
+                </div>
+              </div>
 
-                    </div>
-                  )}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight">
+                {event.name}
+              </h1>
 
-                  {/* Status Badge */}
-                  {event.status === 'ACTIVE' && (
-                    <div className="absolute bottom-3 right-3">
-                      <div className="px-3 py-1.5 bg-green-600 rounded-md text-white text-xs font-semibold flex items-center space-x-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Available</span>
-                      </div>
-                    </div>
-                  )}
-                  </div>
+              <div className="flex flex-wrap items-center gap-6 text-slate-300 text-sm sm:text-base">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-indigo-400" />
+                  <span>{formatDate(event.startDateTime)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-indigo-400" />
+                  <span>{formatTime(event.startDateTime)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-indigo-400" />
+                  <span>{venue?.name || 'TBA'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Event Information */}
-            <div className="lg:col-span-8">
-              {/* Event Title & Type */}
-              <div className="mb-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded-md text-xs font-semibold uppercase">
-                      {event.type}
-                    </span>
-                    {event.seatingType && (
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium capitalize flex items-center space-x-1.5">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{event.seatingType.toLowerCase()}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                  {event.name}
-                </h1>
-                
-                {event.description && (
-                  <p className="text-base text-gray-600">
-                    {event.description}
-                  </p>
-                )}
+            <div className="flex items-center gap-4">
+              {user && (
+                <button
+                  onClick={handleLikeToggle}
+                  disabled={likingInProgress}
+                  className={`group p-4 rounded-full backdrop-blur-md border transition-all duration-300
+                   ${isLiked
+                      ? 'bg-red-500/20 border-red-500/50 text-red-500'
+                      : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                    }`}
+                >
+                  <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: event.name,
+                      text: event.description,
+                      url: window.location.href,
+                    });
+                  } else {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('Link copied!');
+                  }
+                }}
+                className="p-4 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white transition-all"
+              >
+                <Share2 className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+          {/* Main Content */}
+          <div className="lg:col-span-8 space-y-8">
+
+            {/* About Section */}
+            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Info className="w-5 h-5 text-indigo-600" />
+                About the Event
+              </h3>
+              <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed text-justify">
+                {event.description || 'No description available.'}
               </div>
+            </div>
 
-              {/* Event Details Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                {/* Date Card */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <Calendar className="w-5 h-5 text-red-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium uppercase mb-0.5">Date</p>
-                      <p className="text-gray-900 font-semibold">{formatDate(event.startDateTime)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Time Card */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <Clock className="w-5 h-5 text-red-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium uppercase mb-0.5">Time</p>
-                      <p className="text-gray-900 font-semibold">{formatTime(event.startDateTime)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Venue Card */}
-                <div className="sm:col-span-2 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <MapPin className="w-5 h-5 text-red-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium uppercase mb-0.5">Venue</p>
-                      <p className="text-gray-900 font-semibold">
-                        {venue?.name || 'Venue TBA'}
-                      </p>
-                      {venue?.city && (
-                        <p className="text-gray-600 text-sm mt-0.5">
-                          {venue.city}
-                        </p>
-                      )}
-                      {venue?.location && (
-                        <p className="text-gray-500 text-xs mt-0.5">
-                          {venue.location}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Zone Pricing */}
-              {event.zones && event.zones.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Ticket className="w-4 h-4 text-gray-700" />
-                    <h3 className="text-base font-semibold text-gray-900">Ticket Pricing</h3>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {event.zones.map((zone) => (
-                      <div 
-                        key={zone._id}
-                        className="p-3 bg-gray-50 rounded-lg border border-gray-200"
-                      >
-                        <p className="text-gray-600 text-xs mb-0.5">{zone.name}</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          ₹{zone.price.toLocaleString()}
-                        </p>
+            {/* Artists Section */}
+            {event.artists && event.artists.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <Mic2 className="w-5 h-5 text-indigo-600" />
+                  Performing Artists
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {event.artists.map((artist, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-indigo-600 font-bold text-lg">{artist.charAt(0)}</span>
                       </div>
-                    ))}
+                      <span className="font-medium text-slate-700 truncate">{artist}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Map Section */}
+            {venue && (
+              <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Navigation className="w-5 h-5 text-indigo-600" />
+                    Location & Venue
+                  </h3>
+                  <a
+                    href={getDirectMapLink(venue)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                  >
+                    Get Directions <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 h-[300px] sm:h-[400px] relative group">
+                  <iframe
+                    title="Venue Location"
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    src={getMapUrl(venue)}
+                    allowFullScreen
+                    className="grayscale group-hover:grayscale-0 transition-all duration-500"
+                  ></iframe>
+                </div>
+
+                <div className="mt-4 flex items-start gap-3 text-slate-600">
+                  <MapPin className="w-5 h-5 text-slate-400 mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-900">{venue.name}</div>
+                    <div className="text-sm">{venue.location}, {venue.city}</div>
                   </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-4 space-y-6">
+
+            {/* Ticket Card - Sticky */}
+            <div className="bg-white rounded-2xl p-6 shadow-xl border border-indigo-100 lg:sticky lg:top-24">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Tickets & Pricing</h3>
+                <p className="text-sm text-slate-500">Select a category to view seats</p>
+              </div>
+
+              {event.zones && event.zones.length > 0 ? (
+                <div className="space-y-3 mb-8">
+                  {event.zones.map((zone) => (
+                    <div key={zone._id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+                      <span className="text-slate-600 font-medium">{zone.name}</span>
+                      <span className="text-slate-900 font-bold">₹{zone.price.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-50 rounded-lg text-center text-slate-500 text-sm mb-6">
+                  Pricing details available at booking
                 </div>
               )}
 
-              {/* CTA Button */}
-              <div className="mb-4">
-                <button 
-                  onClick={handleSectionClick}
-                  className="w-full sm:w-auto px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center justify-center space-x-2">
-                    <Ticket className="w-5 h-5" />
-                    <span>Book Tickets</span>
-                  </div>
-                </button>
-              </div>
+              <button
+                onClick={() => router.push(`/events/${event._id}/seating`)}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <Ticket className="w-5 h-5" />
+                Book Tickets Now
+              </button>
 
-              {/* Additional Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-2">
-                  <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-gray-900 mb-1.5">Important Information</p>
-                    <ul className="space-y-0.5 text-gray-600 text-xs">
-                      <li>• Arrive at least 30 minutes before the event</li>
-                      <li>• No cancellations or refunds</li>
-                      <li>• Entry subject to terms and conditions</li>
-                      <li>• Outside food and beverages not allowed</li>
-                    </ul>
+              <div className="mt-6 pt-6 border-t border-slate-100 space-y-4">
+                <div className="flex items-center gap-3 text-sm text-slate-600">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <Music className="w-4 h-4 text-slate-500" />
                   </div>
+                  <span>{event.seatingType || 'Standard'} Seating</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-slate-600">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <Info className="w-4 h-4 text-slate-500" />
+                  </div>
+                  <span>Age Requirement: 18+</span>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>

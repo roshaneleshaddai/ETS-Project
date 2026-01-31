@@ -213,10 +213,10 @@ export default function CheckoutPage() {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <button
-                            onClick={() => router.push('/customer')}
+                            onClick={() => router.push('/customer/tickets')}
                             className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all hover:scale-[1.02] active:scale-[0.98]"
                         >
-                            My Bookings
+                            My Tickets
                         </button>
                         <button
                             onClick={() => router.push('/')}

@@ -210,6 +210,7 @@ export default function VenueMap({
 
   const getZoneName = (zoneId) => {
     const section = venue.sections.find(s => s.sectionId === zoneId);
+    console.log('getZoneName', zoneId, section);
     return section?.name || zoneId;
   };
 
