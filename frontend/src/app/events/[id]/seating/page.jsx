@@ -55,7 +55,7 @@ export default function EventSeatingPage() {
 
         // All seats for event
         const seatsRes = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/event/${eventId}`
+          `${process.env.NEXT_PUBLIC_BACKEND_URI}/event-seats/event/${eventId}`
         );
         if (!seatsRes.ok) throw new Error("Failed to fetch seats");
         const seatsData = await seatsRes.json();
@@ -130,7 +130,7 @@ export default function EventSeatingPage() {
       try {
         setIsLocking(true);
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/unlock-seat`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URI}/event-seats/unlock-seat`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -177,7 +177,7 @@ export default function EventSeatingPage() {
     try {
       setIsLocking(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/lock-seat`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URI}/event-seats/lock-seat`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -232,7 +232,7 @@ export default function EventSeatingPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URI}/seats/hold`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URI}/event-seats/hold`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

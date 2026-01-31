@@ -108,6 +108,7 @@ export class AuthService {
     phone?: string;
   }): Promise<{ access_token: string; user: any }> {
     const email = payload.email.trim().toLowerCase();
+    const phone = payload.phone?.trim();
     const otp = payload.otp?.trim();
     if (!email || !otp) {
       throw new BadRequestException('Email and OTP are required');
@@ -136,6 +137,7 @@ export class AuthService {
     const newUser = await this.userService.create({
       name: payload.name.trim(),
       email,
+      phone: phone || undefined,
       role,
       auth: { passwordHash: placeholderHash },
       permissions: [],
@@ -145,7 +147,7 @@ export class AuthService {
         encryptedPII: {
           name: newUser.name,
           email: newUser.email,
-          phone: payload.phone || '',
+          phone: newUser.phone || '',
         },
         userId: newUser._id,
         loyalty: { verified: false },

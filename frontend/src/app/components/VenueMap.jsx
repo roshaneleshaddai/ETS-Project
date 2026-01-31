@@ -20,11 +20,11 @@ export default function VenueMap({
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const svgRef = useRef(null);
 
-  const { width: viewWidth, height: viewHeight } = venue.mapDimensions;
+  const { width: viewWidth, height: viewHeight } = venue?.mapDimensions || { width: 1000, height: 800 };
 
   // Create a map of seat positions from venue config (if present)
   const seatPositionMap = new Map();
-  if (Array.isArray(venue.sections)) {
+  if (Array.isArray(venue?.sections)) {
     venue.sections.forEach((section) => {
       if (Array.isArray(section.seats)) {
         section.seats.forEach((seatConfig) => {
@@ -46,9 +46,9 @@ export default function VenueMap({
 
   // Fallback: if no explicit positions configured anywhere,
   // lay out seats inside their corresponding zone/section shapes
-  if (seatsWithPosition.length === 0 && seats.length > 0 && Array.isArray(venue.sections)) {
+  if (seatsWithPosition.length === 0 && (seats?.length || 0) > 0 && Array.isArray(venue?.sections)) {
     const seatsByZone = new Map();
-    seats.forEach((seat) => {
+    (seats || []).forEach((seat) => {
       if (!seatsByZone.has(seat.zoneId)) {
         seatsByZone.set(seat.zoneId, []);
       }
@@ -56,8 +56,7 @@ export default function VenueMap({
     });
 
     const tempSeatsWithPos = [];
-
-    venue.sections.forEach((section) => {
+    (venue?.sections || []).forEach((section) => {
       const zoneSeats = seatsByZone.get(section.sectionId) || [];
       if (zoneSeats.length === 0 || !Array.isArray(section.boundary) || section.boundary.length === 0) {
         return;
@@ -140,7 +139,7 @@ export default function VenueMap({
   const viewBox = `${-panOffset.x} ${-panOffset.y} ${viewWidth / zoomLevel} ${viewHeight / zoomLevel}`;
 
   const boundaryToPath = (boundary) => {
-    if (boundary.length === 0) return '';
+    if (!boundary || !Array.isArray(boundary) || boundary.length === 0) return '';
     const pathParts = boundary.map((point, idx) =>
       `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
     );
@@ -209,7 +208,7 @@ export default function VenueMap({
   };
 
   const getZoneName = (zoneId) => {
-    const section = venue.sections.find(s => s.sectionId === zoneId);
+    const section = (venue?.sections || []).find(s => s.sectionId === zoneId);
     console.log('getZoneName', zoneId, section);
     return section?.name || zoneId;
   };
@@ -288,7 +287,7 @@ export default function VenueMap({
         >
           {/* Stage */}
           {venue.stagePosition && (
-            <g>
+            <g key="venue-stage">
               <rect
                 x={venue.stagePosition.x - 150}
                 y={venue.stagePosition.y - 30}
@@ -312,9 +311,9 @@ export default function VenueMap({
           )}
 
           {/* Render Sections */}
-          {venue.sections.map((section) => (
+          {(venue?.sections || []).map((section, idx) => (
             <g
-              key={section.sectionId}
+              key={section.sectionId || `section-${idx}`}
               style={{ cursor: onSectionClick ? 'pointer' : 'default' }}
               onClick={(e) => {
                 // Allow section clicks without stealing seat clicks
@@ -332,7 +331,7 @@ export default function VenueMap({
                 strokeWidth={2}
               />
 
-              {section.boundary.length > 0 && (
+              {section.boundary && Array.isArray(section.boundary) && section.boundary.length > 0 && (
                 <text
                   x={section.boundary[0].x + 50}
                   y={section.boundary[0].y + 50}
@@ -348,7 +347,7 @@ export default function VenueMap({
           ))}
 
           {/* Render Seats */}
-          {seatsWithPosition.map((seat) => {
+          {seatsWithPosition.map((seat, idx) => {
             if (!seat.position) return null;
 
             const isSelected = selectedSeatIds.has(seat._id);
@@ -357,7 +356,7 @@ export default function VenueMap({
 
             return (
               <g
-                key={seat._id}
+                key={seat._id || `seat-${idx}`}
                 transform={`translate(${seat.position.x}, ${seat.position.y})`}
                 style={{ cursor: clickable ? 'pointer' : 'not-allowed' }}
                 onClick={(e) => {
@@ -388,10 +387,10 @@ export default function VenueMap({
               </div>
             </div>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
+              {/* <div className="flex justify-between">
                 <span className="text-gray-600">Section:</span>
-                <span className="font-semibold">{getZoneName(hoveredSeat.zoneId)}</span>
-              </div>
+                <span className="font-semibold">{getZoneName(hoveredSeat.sectionId)}</span>
+              </div> */}
               <div className="flex justify-between">
                 <span className="text-gray-600">Row:</span>
                 <span className="font-semibold">{hoveredSeat.row}</span>
@@ -425,9 +424,9 @@ export default function VenueMap({
       <div className="mt-4 p-4 bg-gray-50 rounded-lg">
         <h3 className="font-bold text-gray-900 mb-3">Section Pricing</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {venue.sections.map((section) => (
+          {(venue?.sections || []).map((section, idx) => (
             <div
-              key={section.sectionId}
+              key={section.sectionId || `price-${idx}`}
               className="flex items-center justify-between p-2 bg-white rounded border border-gray-200"
             >
               <div className="flex items-center space-x-2">
