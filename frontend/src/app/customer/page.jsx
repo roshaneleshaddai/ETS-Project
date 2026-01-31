@@ -319,7 +319,7 @@ export default function CustomerHomePage({ user, logout }) {
 
         {/* Featured Stacked Carousel */}
         {shouldShowCarousel && featuredEvents.length > 0 && (
-          <section className="relative w-full h-[550px] max-w-7xl mx-auto py-4">
+          <section className="relative w-full h-[550px] mx-auto py-4">
             <div className="relative w-full h-full flex items-center justify-center perspective-1000">
               {featuredEvents.map((event, index) => {
                 // Calculate position relative to currents slide
@@ -340,9 +340,9 @@ export default function CustomerHomePage({ user, logout }) {
                 if (position === 'active') {
                   cardStyle = "opacity-100 z-30 scale-100 translate-x-0 cursor-pointer shadow-2xl shadow-slate-900/20";
                 } else if (position === 'prev') {
-                  cardStyle = "opacity-40 z-20 scale-85 -translate-x-[60%] md:-translate-x-[70%] cursor-pointer hover:opacity-60";
+                  cardStyle = "opacity-40 z-20 scale-50 -translate-x-[60%] md:-translate-x-[70%] cursor-pointer hover:opacity-60";
                 } else if (position === 'next') {
-                  cardStyle = "opacity-40 z-20 scale-85 translate-x-[60%] md:translate-x-[70%] cursor-pointer hover:opacity-60";
+                  cardStyle = "opacity-40 z-20 scale-50 translate-x-[60%] md:translate-x-[70%] cursor-pointer hover:opacity-60";
                 }
 
                 return (
@@ -353,7 +353,7 @@ export default function CustomerHomePage({ user, logout }) {
                       if (position === 'prev') scrollToPrevious();
                       if (position === 'next') scrollToNext();
                     }}
-                    className={`absolute top-0 w-full md:w-[80%] lg:w-[70%] h-full transition-all duration-700 ease-in-out ${cardStyle}`}
+                    className={`absolute top-0 w-full md:w-[80%] h-full transition-all duration-700 ease-in-out ${cardStyle}`}
                   >
                     <div className="relative w-full h-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-200/20">
                       <img
@@ -415,7 +415,7 @@ export default function CustomerHomePage({ user, logout }) {
                 {/* Left Button */}
                 <button
                   onClick={(e) => { e.stopPropagation(); scrollToPrevious(); }}
-                  className="absolute left-4 md:left-12 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/30 backdrop-blur-md text-white rounded-full p-4 z-40 transition-all transform hover:scale-110"
+                  className="absolute left-4 md:left-12 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-md text-white rounded-full p-4 z-40 transition-all transform hover:scale-110"
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
@@ -423,7 +423,7 @@ export default function CustomerHomePage({ user, logout }) {
                 {/* Right Button */}
                 <button
                   onClick={(e) => { e.stopPropagation(); scrollToNext(); }}
-                  className="absolute right-4 md:right-12 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/30 backdrop-blur-md text-white rounded-full p-4 z-40 transition-all transform hover:scale-110"
+                  className="absolute right-4 md:right-12 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-md text-white rounded-full p-4 z-40 transition-all transform hover:scale-110"
                 >
                   <ChevronRight className="w-6 h-6" />
                 </button>

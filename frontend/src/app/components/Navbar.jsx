@@ -30,7 +30,7 @@ export default function Navbar({ showSearch = false, searchQuery, setSearchQuery
     { icon: Home, label: "Home", path: "/" },
     { icon: Users, label: "Users", path: "/admin/users" },
     { icon: Ticket, label: "Analytics", path: "/admin/analytics" },
-    { icon: Settings, label: "Settings", path: "/admin/settings" },
+    // { icon: Settings, label: "Settings", path: "/admin/settings" },
   ];
 
   // Customer navigation items
@@ -84,7 +84,7 @@ export default function Navbar({ showSearch = false, searchQuery, setSearchQuery
 
           {/* LEFT — Logo */}
           <div className="flex items-center gap-3 w-[200px]">
-            <div className="relative w-32 h-12 cursor-pointer" onClick={() => router.push('/')}>
+            <div className="relative w-36 h-18 cursor-pointer" onClick={() => router.push('/')}>
               <Image
                 src="/EP_Logo_nobg.png"
                 alt="Emperors Palace Logo"

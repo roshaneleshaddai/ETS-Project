@@ -197,9 +197,9 @@ export default function EventDetailsPage() {
         <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-16">
           <button
             onClick={() => router.back()}
-            className="absolute top-8 left-4 sm:left-8 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white text-sm font-medium transition flex items-center gap-2"
+            className="absolute flex items-center gap-2 top-6 left-4 sm:left-8 px-4 py-2 bg-white border border-slate-200 rounded-full text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm hover:shadow-md"
           >
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-4 h-4 transition-transform hover:-translate-x-1" /> Back
           </button>
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
@@ -216,7 +216,7 @@ export default function EventDetailsPage() {
                 {/* <Heart className="w-5 h-5 fill-red-500 text-red-500" />
                 <span className="text-white font-bold">{formatLikes(event.likes || 0)}</span>
                  */}
-                <div className="absolute top-8 sm:right-8 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                <div className="absolute top-6 sm:right-8 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
                   <Heart className="w-5 h-5 fill-red-500 text-red-500" />
                   <span className="text-white font-bold">{formatLikes(event.likes || 0)}</span>
                 </div>
