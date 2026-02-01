@@ -14,6 +14,9 @@ export class Ticket {
   @Prop({ required: true, unique: true })
   qrCode: string; // UUID string
 
+  @Prop({ required: true, unique: true })
+  ticketCode: string; // Human readable or simple code
+
   @Prop({ type: Types.ObjectId, ref: 'Order', required: true })
   orderId: Types.ObjectId;
 

@@ -137,7 +137,6 @@ export class EventSeatsService {
       });
     }
 
-
     return allSeats;
   }
 
@@ -269,6 +268,8 @@ export class EventSeatsService {
       const soldSeats: any[] = [];
       const redisKeysToDelete: string[] = [];
 
+      const orderId = new Types.ObjectId(); // Generate a new Order ID for this transaction
+
       for (const fullId of eventSeatIds) {
         let eventId, uid;
         if (fullId.includes(':')) {
@@ -276,10 +277,11 @@ export class EventSeatsService {
           eventId = parts[0];
           uid = parts.slice(1).join(':');
         } else {
-          const seat = await this.seatModel.findById(fullId).lean();
-          if (!seat) throw new NotFoundException(`Seat ${fullId} not found`);
-          eventId = seat.eventId.toString();
-          uid = `${seat.sectionId}:${seat.row}:${seat.seatNumber}`;
+          const existingSeat = await this.seatModel.findById(fullId).lean();
+          if (!existingSeat)
+            throw new NotFoundException(`Seat ${fullId} not found`);
+          eventId = existingSeat.eventId.toString();
+          uid = `${existingSeat.sectionId}:${existingSeat.row}:${existingSeat.seatNumber}`;
         }
 
         const [sectionId, row, num] = uid.split(':');
@@ -298,19 +300,32 @@ export class EventSeatsService {
             eventId: new Types.ObjectId(eventId),
             sectionId,
             row,
-            seatNumber: num,
+            seatNumber: num, // ensure string/number match schema
           },
           {
             status: SeatStatus.SOLD,
             lockedBy: null,
-            // We can fetch position/zone data from Venue if needed here,
-            // but usually minimal data is fine for the Sold record
           },
           { upsert: true, new: true, session },
         );
 
         soldSeats.push(seat);
         redisKeysToDelete.push(redisKey);
+
+        // --- CREATE TICKET ---
+        // Note: Title is not in schema, removing it.
+        const ticketCode = new Types.ObjectId().toString(); // Use unique ID for ticketCode as well
+        const ticket = new this.ticketModel({
+          qrCode: ticketCode,
+          ticketCode: ticketCode,
+          orderId: orderId,
+          customerId: new Types.ObjectId(userId),
+          eventId: new Types.ObjectId(eventId),
+          seatId: seat._id,
+          pricePaid: (seat as any).price || 0,
+          status: 'VALID',
+        });
+        await ticket.save({ session });
       }
 
       await session.commitTransaction();

@@ -66,7 +66,6 @@ export class TicketsService {
         .find({ customerId: new Types.ObjectId(customerId) })
         .populate('eventId')
         .populate('seatId')
-        .populate('zoneId')
         .exec();
     } catch (error) {
       console.error('Error in findByCustomerId:', error);
